@@ -61,9 +61,6 @@ export type ConversionReport = {
 export type ConversionOptions = {
   preserveFolderStructure: true
   includeConversionReport: true
-  copyMarkdownFiles: true
-  skipUnsupportedFiles: true
-  addTitleFromFilename: false
 }
 
 export type ZipReadResult = {

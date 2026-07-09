@@ -1,5 +1,5 @@
 import { strFromU8, Unzip, UnzipInflate, type UnzipFile } from 'fflate'
-import { convertToMarkdown, isSupportedExtension } from '../converters'
+import { convertToMarkdown } from '../converters'
 import {
   createConversionReportMarkdown,
   createReport,
@@ -15,7 +15,7 @@ import type {
 } from '../types/conversion'
 import { createOutputZip, markdownToBytes, type OutputZipFiles } from '../zip/createOutputZip'
 import { readZipEntriesFromData } from '../zip/readZip'
-import { replaceExtension } from '../zip/sanitizePath'
+
 
 const textDecoder = new TextDecoder()
 const streamChunkBytes = 64 * 1024
@@ -45,6 +45,7 @@ async function startConversion(request: Extract<WorkerRequest, { type: 'START_CO
   const results: ConversionResult[] = []
   const warnings: string[] = []
   const outputFiles: OutputZipFiles = {}
+  const sections: string[] = []
   let unsafePaths: UnsafePathResult[] = []
   let totalFiles = 0
   let processedFiles = 0
@@ -119,6 +120,7 @@ async function startConversion(request: Extract<WorkerRequest, { type: 'START_CO
       fileEntries,
       options: request.options,
       outputFiles,
+      sections,
       warnings,
       recordSkipped,
       recordFailed,
@@ -148,6 +150,7 @@ async function startConversion(request: Extract<WorkerRequest, { type: 'START_CO
       )
     }
 
+    outputFiles['output.md'] = markdownToBytes(sections.join('\n\n'))
     const outputBlob = createOutputZip(outputFiles)
 
     if (cancelled) {
@@ -184,6 +187,7 @@ type StreamParams = {
   fileEntries: ZipEntry[]
   options: ConversionOptions
   outputFiles: OutputZipFiles
+  sections: string[]
   warnings: string[]
   recordSkipped: (entry: ZipEntry, reason: string) => void
   recordFailed: (entry: ZipEntry, reason: string) => void
@@ -234,21 +238,10 @@ function processZipStream(params: StreamParams): Promise<void> {
         return
       }
 
-      if (!isSupportedExtension(entry.extension)) {
-        if (params.options.skipUnsupportedFiles) {
-          params.recordSkipped(entry, 'Unsupported file type')
-        }
-        activeFiles += 1
-        drainSkippedFile(file, () => {
-          activeFiles -= 1
-          finish()
-        })
-        return
-      }
 
-      if (entry.extension === 'md' && !params.options.copyMarkdownFiles) {
-        params.recordSkipped(entry, 'Markdown copy disabled')
-        return
+
+      if (entry.extension === 'md') {
+        // ponytail: always include markdown as-is in combined output
       }
 
       params.postProgress(entry.path)
@@ -293,21 +286,13 @@ function processZipStream(params: StreamParams): Promise<void> {
             const bytes = concatChunks(chunks, byteLength)
             const content = decodeText(bytes)
             const conversion = convertToMarkdown(entry.extension, content)
-            const desiredOutputPath = params.options.preserveFolderStructure
-              ? replaceExtension(entry.safePath, '.md')
-              : replaceExtension(entry.name, '.md')
-            const outputPath = uniqueOutputPath(desiredOutputPath, params.outputFiles)
+            const displayPath = params.options.preserveFolderStructure ? entry.safePath : entry.name
 
-            params.outputFiles[outputPath] = markdownToBytes(conversion.markdown)
-            if (outputPath !== desiredOutputPath) {
-              params.warnings.push(
-                `${entry.path}: Output path already existed; wrote ${outputPath} instead.`,
-              )
-            }
+            params.sections.push(`## ${displayPath}\n\n${conversion.markdown}`)
             params.warnings.push(
               ...conversion.warnings.map((warning) => `${entry.path}: ${warning}`),
             )
-            params.recordConverted(entry, outputPath)
+            params.recordConverted(entry, displayPath)
           } catch (conversionError) {
             params.recordFailed(
               entry,
@@ -411,24 +396,6 @@ function decodeText(bytes: Uint8Array): string {
   }
 }
 
-function uniqueOutputPath(path: string, outputFiles: OutputZipFiles): string {
-  if (!outputFiles[path]) {
-    return path
-  }
-
-  const dotIndex = path.lastIndexOf('.')
-  const base = dotIndex > -1 ? path.slice(0, dotIndex) : path
-  const extension = dotIndex > -1 ? path.slice(dotIndex) : ''
-  let index = 2
-  let candidate = `${base}-${index}${extension}`
-
-  while (outputFiles[candidate]) {
-    index += 1
-    candidate = `${base}-${index}${extension}`
-  }
-
-  return candidate
-}
 
 function yieldToWorker(): Promise<void> {
   return new Promise((resolve) => {

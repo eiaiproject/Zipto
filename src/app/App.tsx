@@ -25,9 +25,6 @@ type AppError = {
 const defaultOptions: ConversionOptions = {
   preserveFolderStructure: true,
   includeConversionReport: true,
-  copyMarkdownFiles: true,
-  skipUnsupportedFiles: true,
-  addTitleFromFilename: false,
 }
 
 function App() {
@@ -288,7 +285,7 @@ function isZipFile(file: File): boolean {
 }
 
 function createOutputFilename(sourceName: string): string {
-  return `${sourceName.replace(/\.zip$/i, '')}-markdown.zip`
+  return `${sourceName.replace(/\.zip$/i, '')}.md`
 }
 
 function reportToProgress(
