@@ -351,6 +351,28 @@ h3 {
   font-weight: 700;
 }
 
+.output-preview {
+  display: grid;
+  gap: 8px;
+}
+
+.output-preview h3 {
+  color: var(--text);
+}
+
+.preview-content {
+  max-height: 280px;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 20px, 1120px);

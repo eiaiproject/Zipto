@@ -5,6 +5,7 @@ type ResultPanelProps = {
   report: ConversionReport
   downloadUrl?: string
   outputFilename: string
+  outputContent?: string
 }
 
 export function ResultPanel({
@@ -12,6 +13,7 @@ export function ResultPanel({
   report,
   downloadUrl,
   outputFilename,
+  outputContent,
 }: ResultPanelProps) {
   return (
     <section className="panel result-panel">
@@ -54,8 +56,22 @@ export function ResultPanel({
         </div>
       </dl>
 
+      {report.skippedFiles > 0 ? (
+        <div className="notice notice-warning">
+          <strong>{report.skippedFiles} file{report.skippedFiles !== 1 ? 's' : ''} skipped.</strong>
+          {' '}Check <code>conversion-report.md</code> in the output ZIP for details.
+        </div>
+      ) : null}
+
+      {outputContent ? (
+        <div className="output-preview">
+          <h3>Output preview</h3>
+          <pre className="preview-content"><code>{outputContent}</code></pre>
+        </div>
+      ) : null}
+
       <div className="report-summary">
-        <h3>Conversion report summary</h3>
+        <h3>Conversion report</h3>
         <p>
           The output ZIP includes <code>conversion-report.md</code> with skipped
           files, failed files, unsafe paths, and warnings.

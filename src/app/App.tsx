@@ -6,7 +6,6 @@ import { UploadDropzone } from './components/UploadDropzone'
 import { ZipSummary } from './components/ZipSummary'
 import './styles/app.css'
 import type {
-  ConversionOptions,
   ConversionProgress,
   ConversionReport,
   ConversionStatus,
@@ -22,10 +21,7 @@ type AppError = {
   details?: string
 }
 
-const defaultOptions: ConversionOptions = {
-  preserveFolderStructure: true,
-  includeConversionReport: true,
-}
+
 
 function App() {
   const [status, setStatus] = useState<ConversionStatus>('idle')
@@ -36,7 +32,8 @@ function App() {
   const [progress, setProgress] = useState<ConversionProgress>()
   const [report, setReport] = useState<ConversionReport>()
   const [downloadUrl, setDownloadUrl] = useState<string>()
-  const [outputFilename, setOutputFilename] = useState('markdown-output.zip')
+  const [outputFilename, setOutputFilename] = useState('')
+  const [outputContent, setOutputContent] = useState<string>()
   const [cancelRequested, setCancelRequested] = useState(false)
   const workerRef = useRef<Worker | undefined>(undefined)
   const downloadUrlRef = useRef<string | undefined>(undefined)
@@ -134,7 +131,6 @@ function App() {
     const request: WorkerRequest = {
       type: 'START_CONVERSION',
       file: sourceFile,
-      options: defaultOptions,
     }
     worker.postMessage(request)
   }
@@ -181,6 +177,12 @@ function App() {
       downloadUrlRef.current = url
       setDownloadUrl(url)
       setOutputFilename(createOutputFilename(sourceFile.name))
+
+      if (nextStatus === 'completed' && nextReport?.convertedFiles) {
+        extractPreviewFromZip(outputBlob).then(setOutputContent).catch(() => {
+          // Preview is optional; ignore failures
+        })
+      }
     }
 
     cleanupWorker()
@@ -269,6 +271,7 @@ function App() {
             report={report}
             downloadUrl={downloadUrl}
             outputFilename={outputFilename}
+            outputContent={outputContent}
           />
         ) : null}
       </div>
@@ -285,7 +288,24 @@ function isZipFile(file: File): boolean {
 }
 
 function createOutputFilename(sourceName: string): string {
-  return `${sourceName.replace(/\.zip$/i, '')}.md`
+  return `${sourceName.replace(/\.zip$/i, '')}-markdown.zip`
+}
+
+async function extractPreviewFromZip(blob: Blob): Promise<string | undefined> {
+  try {
+    const { unzipSync, strFromU8 } = await import('fflate')
+    const data = new Uint8Array(await blob.arrayBuffer())
+    const unzipped = unzipSync(data)
+    const mdFile = unzipped['output.md']
+    if (mdFile) {
+      const text = strFromU8(mdFile)
+      const preview = text.slice(0, 500)
+      return text.length > 500 ? preview + '\n\n...' : preview
+    }
+  } catch {
+    // silently fail
+  }
+  return undefined
 }
 
 function reportToProgress(
