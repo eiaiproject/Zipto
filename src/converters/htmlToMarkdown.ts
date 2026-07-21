@@ -69,7 +69,8 @@ function normalizeRow(row: string[], width: number): string[] {
 }
 
 function tableRow(cells: string[]): string {
-  return `| ${cells.map((cell) => cell.replaceAll('|', String.raw`\|`)).join(' | ')} |`
+  const escaped = cells.map((cell) => cell.replaceAll('|', String.raw`\|`))
+  return `| ${escaped.join(' | ')} |`
 }
 
 function normalizeCell(cell: string): string {

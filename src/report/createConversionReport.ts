@@ -28,42 +28,32 @@ export function createConversionReportMarkdown(report: ConversionReport): string
     '',
   ]
 
-  parts.push(`## Failed Files (${failedFiles.length})`, '')
-  if (failedFiles.length === 0) {
-    parts.push('None.')
-  } else {
-    parts.push(...failedFiles.map((f) => {
-      return `- \`${escapeBackticks(f.sourcePath)}\` — ${f.reason ?? 'Unknown error'}`
-    }))
+  {
+    const lines = failedFiles.length === 0
+      ? ['None.']
+      : failedFiles.map((f) => `- \`${escapeBackticks(f.sourcePath)}\` — ${f.reason ?? 'Unknown error'}`)
+    parts.push(`## Failed Files (${failedFiles.length})`, '', ...lines, '')
   }
-  parts.push('')
 
-  parts.push(`## Skipped Files (${skippedFiles.length})`, '')
-  if (skippedFiles.length === 0) {
-    parts.push('None.')
-  } else {
-    parts.push(...skippedFiles.map((f) => {
-      return `- \`${escapeBackticks(f.sourcePath)}\` — ${f.reason ?? 'Unknown reason'}`
-    }))
+  {
+    const lines = skippedFiles.length === 0
+      ? ['None.']
+      : skippedFiles.map((f) => `- \`${escapeBackticks(f.sourcePath)}\` — ${f.reason ?? 'Unknown reason'}`)
+    parts.push(`## Skipped Files (${skippedFiles.length})`, '', ...lines, '')
   }
-  parts.push('')
 
-  parts.push(`## Unsafe Paths (${report.unsafePaths.length})`, '')
-  if (report.unsafePaths.length === 0) {
-    parts.push('None.')
-  } else {
-    parts.push(...report.unsafePaths.map((p) => {
-      return `- \`${escapeBackticks(p.path)}\` — ${p.reason} (${p.action})`
-    }))
+  {
+    const lines = report.unsafePaths.length === 0
+      ? ['None.']
+      : report.unsafePaths.map((p) => `- \`${escapeBackticks(p.path)}\` — ${p.reason} (${p.action})`)
+    parts.push(`## Unsafe Paths (${report.unsafePaths.length})`, '', ...lines, '')
   }
-  parts.push('')
 
   if (report.warnings.length > 0) {
     parts.push('## Warnings', '', ...report.warnings.map((w) => `- ${w}`), '')
   }
 
-  parts.push('---', '')
-  parts.push('*All files were processed locally in the browser. No data was uploaded to any server.*')
+  parts.push('---', '', '*All files were processed locally in the browser. No data was uploaded to any server.*')
 
   return parts.join('\n')
 }

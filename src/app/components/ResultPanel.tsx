@@ -63,7 +63,7 @@ export function ResultPanel({
       </dl>
 
       {report.skippedFiles > 0 ? (
-        <output className="notice notice-warning" role="status">
+        <output className="notice notice-warning">
           <strong>{report.skippedFiles} file{report.skippedFiles !== 1 ? 's' : ''} skipped.</strong>
           {' '}See the conversion report at the top of the downloaded <code>.md</code>.
         </output>
