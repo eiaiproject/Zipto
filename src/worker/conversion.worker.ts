@@ -1,10 +1,6 @@
 import { strFromU8, Unzip, UnzipInflate, type UnzipFile } from 'fflate'
-import { convertToMarkdown } from '../converters'
-import {
-  createConversionReportMarkdown,
-  createReport,
-  formatConversionTimestamp,
-} from '../report/createConversionReport'
+import { convertToMarkdown, isSupportedExtension } from '../converters'
+import { createConversionReportMarkdown, createReport, formatConversionTimestamp } from '../report/createConversionReport'
 import type {
   ConversionResult,
   UnsafePathResult,
@@ -12,7 +8,6 @@ import type {
   WorkerResponse,
   ZipEntry,
 } from '../types/conversion'
-import { createOutputZip, markdownToBytes, type OutputZipFiles } from '../zip/createOutputZip'
 import { readZipEntriesFromData } from '../zip/readZip'
 
 
@@ -43,7 +38,6 @@ async function startConversion(request: WorkerRequest & { type: 'START_CONVERSIO
   const startedAt = Date.now()
   const results: ConversionResult[] = []
   const warnings: string[] = []
-  const outputFiles: OutputZipFiles = {}
   const sections: string[] = []
   let unsafePaths: UnsafePathResult[] = []
   let totalFiles = 0
@@ -117,7 +111,6 @@ async function startConversion(request: WorkerRequest & { type: 'START_CONVERSIO
     await processZipStream({
       data,
       fileEntries,
-      outputFiles,
       sections,
       warnings,
       recordSkipped,
@@ -142,14 +135,9 @@ async function startConversion(request: WorkerRequest & { type: 'START_CONVERSIO
       unsafePaths,
     })
 
-    outputFiles['conversion-report.md'] = markdownToBytes(
-      createConversionReportMarkdown(report),
-    )
-
-    outputFiles['output.md'] = markdownToBytes(
-      buildOutputMarkdown(sections, request.file.name, totalFiles, convertedFiles, skippedFiles, failedFiles),
-    )
-    const outputBlob = createOutputZip(outputFiles)
+    const reportMarkdown = createConversionReportMarkdown(report)
+    const finalMarkdown = `${reportMarkdown}\n\n---\n\n${sections.join('\n\n')}`
+    const outputBlob = new Blob([finalMarkdown], { type: 'text/markdown;charset=utf-8' })
 
     if (cancelled) {
       postWorkerMessage({
@@ -183,7 +171,6 @@ async function startConversion(request: WorkerRequest & { type: 'START_CONVERSIO
 type StreamParams = {
   data: Uint8Array
   fileEntries: ZipEntry[]
-  outputFiles: OutputZipFiles
   sections: string[]
   warnings: string[]
   recordSkipped: (entry: ZipEntry, reason: string) => void
@@ -235,7 +222,15 @@ function processZipStream(params: StreamParams): Promise<void> {
         return
       }
 
-
+      if (!isSupportedExtension(entry.extension)) {
+        params.recordSkipped(entry, 'Unsupported file type')
+        activeFiles += 1
+        drainSkippedFile(file, () => {
+          activeFiles -= 1
+          finish()
+        })
+        return
+      }
 
       params.postProgress(entry.path)
       activeFiles += 1
@@ -400,46 +395,6 @@ function postWorkerMessage(message: WorkerResponse) {
   self.postMessage(message)
 }
 
-function buildOutputMarkdown(
-  sections: string[],
-  sourceZipName: string,
-  totalFiles: number,
-  convertedFiles: number,
-  skippedFiles: number,
-  failedFiles: number,
-): string {
-  const timestamp = formatConversionTimestamp()
-  const header = `# ZIP to Markdown Output
 
-**Source ZIP:** \`${sourceZipName}\`
-**Converted at:** ${timestamp}
-**Total files:** ${totalFiles} | **Converted:** ${convertedFiles} | **Skipped:** ${skippedFiles} | **Failed:** ${failedFiles}
-
-## Table of Contents
-
-${generateToc(sections)}
-
----
-
-`
-  return header + sections.join('\n\n---\n\n') + '\n'
-}
-
-function generateToc(sections: string[]): string {
-  const headingRegex = /^##\s+(.+)$/m
-  return sections
-    .map((section) => {
-      const match = headingRegex.exec(section)
-      if (!match) return null
-      const title = match[1]!
-      const anchor = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-      return `- [${title}](#${anchor})`
-    })
-    .filter((item): item is string => item !== null)
-    .join('\n')
-}
 
 export {}

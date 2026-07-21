@@ -11,6 +11,7 @@ export function UploadDropzone({
 }: UploadDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const dragCounter = useRef(0)
 
   function handleFiles(files: FileList | null) {
     const file = files?.[0]
@@ -26,6 +27,7 @@ export function UploadDropzone({
       onDragEnter={(event) => {
         event.preventDefault()
         if (!disabled) {
+          dragCounter.current++
           setIsDragging(true)
         }
       }}
@@ -34,11 +36,16 @@ export function UploadDropzone({
       }}
       onDragLeave={(event) => {
         event.preventDefault()
-        setIsDragging(false)
+        dragCounter.current--
+        if (dragCounter.current <= 0) {
+          dragCounter.current = 0
+          setIsDragging(false)
+        }
       }}
       onDrop={(event) => {
         event.preventDefault()
         setIsDragging(false)
+        dragCounter.current = 0
         if (!disabled) {
           handleFiles(event.dataTransfer.files)
         }
@@ -55,10 +62,10 @@ export function UploadDropzone({
           event.currentTarget.value = ''
         }}
       />
-      <div>
+      <div className="dropzone-text">
         <p className="dropzone-title">Drop a ZIP archive here</p>
         <p className="dropzone-copy">
-          TXT, MD, HTML, CSV, JSON, XML, YAML, and LOG files can be converted.
+          TXT, MD, HTML, CSV, JSON, XML, YAML, and LOG files will be converted.
         </p>
       </div>
       <button

@@ -5,7 +5,6 @@ type ZipSummaryProps = {
   entries: ZipEntry[]
   unsafePaths: UnsafePathResult[]
   onConvert: () => void
-  convertDisabled?: boolean
 }
 
 export function ZipSummary({
@@ -13,7 +12,6 @@ export function ZipSummary({
   entries,
   unsafePaths,
   onConvert,
-  convertDisabled = false,
 }: ZipSummaryProps) {
   const files = entries.filter((entry) => !entry.isDirectory)
   const previewEntries = entries.slice(0, 80)
@@ -21,18 +19,18 @@ export function ZipSummary({
 
   return (
     <section className="panel zip-summary">
-      <div className="panel-header">
+      <div className="zip-summary-head">
         <div>
-          <p className="section-label">ZIP summary</p>
-          <h2>{file.name}</h2>
+          <h2 className="zip-summary-filename">{file.name}</h2>
+          <p className="zip-summary-meta">Ready to convert</p>
         </div>
         <button
           type="button"
-          className="button button-primary"
-          disabled={convertDisabled}
+          className="button button-primary zip-summary-action"
+          disabled={files.length === 0}
           onClick={onConvert}
         >
-          Convert
+          Convert to Markdown
         </button>
       </div>
 
@@ -56,27 +54,25 @@ export function ZipSummary({
       </dl>
 
       <p className="notice notice-warning">
-        This ZIP may take a long time to process and may use significant memory.
-        You can cancel the conversion at any time.
+        Large archives may take a while and use significant memory. You can cancel at any time.
       </p>
 
-      <div className="file-list" aria-label="ZIP file list">
+      <ul className="file-list" aria-label="ZIP file list">
         {previewEntries.map((entry) => (
-          <div
+          <li
             className={`file-row ${entry.isUnsafe ? 'is-unsafe' : ''}`}
             key={`${entry.path}-${entry.compressedSize ?? 0}`}
           >
             <span>{entry.isDirectory ? 'Folder' : entry.extension || 'File'}</span>
             <code>{entry.path}</code>
-          </div>
+          </li>
         ))}
-        {remainingEntries > 0 ? (
-          <p className="file-list-more">
-            {remainingEntries.toLocaleString()} more entries not shown in this
-            preview.
-          </p>
-        ) : null}
-      </div>
+      </ul>
+      {remainingEntries > 0 ? (
+        <p className="file-list-more">
+          {remainingEntries.toLocaleString()} more entries not shown in this preview.
+        </p>
+      ) : null}
     </section>
   )
 }

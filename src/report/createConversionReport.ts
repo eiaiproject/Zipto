@@ -4,15 +4,15 @@ export function createConversionReportMarkdown(report: ConversionReport): string
   const failedFiles = report.results.filter((r) => r.status === 'failed')
   const skippedFiles = report.results.filter((r) => r.status === 'skipped')
 
-  const statusIcon = report.cancelled ? '⚠️' : report.completed ? '✅' : '❌'
   const statusText = report.cancelled ? 'Cancelled' : report.completed ? 'Completed' : 'Failed'
+  // ponytail: status icon omitted; replace with inline reicon.dev SVG when assets available
 
   const parts: string[] = [
     '# Conversion Report',
     '',
     `**Source ZIP:** \`${report.sourceZipName}\``,
     `**Converted at:** ${report.convertedAt}`,
-    `**Status:** ${statusIcon} ${statusText}`,
+    `**Status:** ${statusText}`,
     '',
     '## Summary',
     '',

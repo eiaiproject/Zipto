@@ -17,23 +17,18 @@ export function ProgressPanel({
       : 0
 
   return (
-    <section className="panel progress-panel" aria-live="polite">
-      <div className="panel-header">
-        <div>
-          <p className="section-label">Progress</p>
-          <h2>{cancelRequested ? 'Cancelling...' : 'Converting files'}</h2>
-        </div>
-        <button
-          type="button"
-          className="button button-secondary"
-          disabled={cancelRequested}
-          onClick={onCancel}
-        >
-          Cancel
-        </button>
+    <section className="panel progress-panel" aria-label="Conversion progress">
+      <div className="progress-head">
+        <p className="progress-headline">
+          {cancelRequested ? 'Cancelling…' : `Converting — ${percent}%`}
+        </p>
+        <p className="progress-sub">
+          {progress.processedFiles} of {progress.totalFiles} files · {formatElapsed(progress.elapsedMs)} elapsed
+        </p>
+        <span className="sr-only" aria-live="polite">{percent}% processed — {progress.processedFiles} of {progress.totalFiles} files</span>
       </div>
 
-      <div className="progress-track" aria-label={`${percent}% processed`}>
+      <div className="progress-track" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`${percent}% processed`}>
         <div className="progress-fill" style={{ width: `${percent}%` }} />
       </div>
 
@@ -47,18 +42,6 @@ export function ProgressPanel({
           <dd>{progress.processedFiles.toLocaleString()}</dd>
         </div>
         <div>
-          <dt>Converted</dt>
-          <dd>{progress.convertedFiles.toLocaleString()}</dd>
-        </div>
-        <div>
-          <dt>Skipped</dt>
-          <dd>{progress.skippedFiles.toLocaleString()}</dd>
-        </div>
-        <div>
-          <dt>Failed</dt>
-          <dd>{progress.failedFiles.toLocaleString()}</dd>
-        </div>
-        <div>
           <dt>Elapsed</dt>
           <dd>{formatElapsed(progress.elapsedMs)}</dd>
         </div>
@@ -66,8 +49,18 @@ export function ProgressPanel({
 
       <p className="current-file">
         <span>Current file</span>
-        <code>{progress.currentFile ?? 'Preparing ZIP...'}</code>
+        <code>{progress.currentFile ?? 'Preparing ZIP…'}</code>
       </p>
+
+      <button
+        type="button"
+        className="button button-secondary"
+        style={{ justifySelf: 'end' }}
+        disabled={cancelRequested}
+        onClick={onCancel}
+      >
+        {cancelRequested ? 'Cancelling…' : 'Cancel conversion'}
+      </button>
     </section>
   )
 }

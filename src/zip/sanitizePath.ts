@@ -20,7 +20,7 @@ export function sanitizeZipPath(path: string): SanitizedPath {
   if (
     normalized.startsWith('/') ||
     normalized.startsWith('//') ||
-    /^[A-Za-z]:\//.test(normalized)
+    /^[A-Za-z]:/.test(normalized)
   ) {
     return {
       safePath: cleanSegments.join('/'),

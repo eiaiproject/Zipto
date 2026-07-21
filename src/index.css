@@ -1,26 +1,60 @@
+/* Hallmark · app shell · genre: tool · tone: earthy
+ * contrast: pass (40–41) · mobile: pass (34, 49, 50–57)
+ */
 :root {
-  --bg: #f7f4ef;
-  --surface: #fffdfa;
-  --surface-strong: #ffffff;
-  --text: #2c2924;
-  --muted: #736b60;
-  --border: #ded4c6;
-  --accent: #0f766e;
-  --accent-strong: #0b4f4a;
-  --accent-soft: #d7f2ed;
-  --danger: #a33932;
-  --danger-soft: #f9ded9;
-  --warning: #8a5a00;
-  --warning-soft: #f9edc7;
-  --shadow: 0 18px 44px rgba(57, 45, 28, 0.1);
+  /* Earthy paper — warm beige tinted toward terracotta (no zero-chroma neutrals) */
+  --bg: oklch(95% 0.012 65);            /* warm linen */
+  --surface: oklch(98% 0.008 70);       /* cream */
+  --surface-strong: oklch(99% 0.006 70); /* ivory */
 
-  --sans:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Ink — deep clay, not pure black */
+  --text: oklch(28% 0.018 50);          /* dark sienna-brown */
+  --muted: oklch(48% 0.022 55);         /* mid clay */
 
-  font: 16px/1.5 var(--sans);
-  letter-spacing: 0;
+  /* Borders — hairline, warm-tinted */
+  --border: oklch(86% 0.018 70);
+
+  /* Terracotta accent — the earthy anchor */
+  --accent: oklch(54% 0.135 38);        /* terracotta */
+  --accent-strong: oklch(40% 0.115 35); /* deep clay */
+  --accent-soft: oklch(92% 0.038 50);   /* sand wash */
+  --accent-ink: oklch(98% 0.008 70);    /* ivory — readable on accent fills */
+
+  /* Status tones — kept in the same warm family */
+  --danger: oklch(48% 0.135 25);        /* brick */
+  --danger-soft: oklch(92% 0.038 25);
+  --warning: oklch(55% 0.105 70);       /* ochre */
+  --warning-soft: oklch(93% 0.045 80);
+
+  /* Two-tier shadow + elevation tokens */
+  --shadow-1: 0 1px 0 oklch(28% 0.018 50 / 0.06);  /* hairline lift */
+  --shadow-2: 0 8px 20px oklch(28% 0.018 50 / 0.08); /* panel */
+  --shadow-icon: 0 1px 2px oklch(28% 0.018 50 / 0.08);
+
+  /* Type pair — Fraunces (display serif) + Inter (body) */
+  --font-display: Sora, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  --font-sans: Sora, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+  /* Radii — two-tier */
+  --radius-1: 6px;
+  --radius-2: 12px;
+
+  /* Easings + durations */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-short: 140ms;
+  --dur-med: 200ms;
+
+  /* Z-scale */
+  --z-sticky: 200;
+  --z-sticky-nav: 300;
+  --z-banner: 100;
+
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
   color-scheme: light;
   color: var(--text);
   background: var(--bg);
@@ -54,7 +88,7 @@ a {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -63,8 +97,20 @@ p {
 }
 
 code {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: 0.92em;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

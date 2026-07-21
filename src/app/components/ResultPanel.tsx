@@ -17,19 +17,25 @@ export function ResultPanel({
 }: ResultPanelProps) {
   return (
     <section className="panel result-panel">
-      <div className="panel-header">
-        <div>
-          <p className="section-label">Result</p>
-          <h2>{status === 'completed' ? 'Conversion completed' : 'Conversion cancelled'}</h2>
-        </div>
+      <div className="result-head">
+        <span className={`result-tick ${status === 'cancelled' ? 'is-cancelled' : ''}`} aria-hidden="true">
+          {status === 'completed' ? '✓' : '⏸'}
+        </span>
+        <h2 className="result-title">
+          {status === 'completed' ? 'Conversion complete' : 'Conversion cancelled'}
+        </h2>
         {downloadUrl ? (
-          <a className="button button-primary" href={downloadUrl} download={outputFilename}>
-            Download output ZIP
+          <a
+            className="button button-primary result-action"
+            href={downloadUrl}
+            download={outputFilename}
+          >
+            Download Markdown
           </a>
         ) : null}
       </div>
 
-      <dl className="summary-grid">
+      <dl className="summary-grid result-grid">
         <div>
           <dt>Total files</dt>
           <dd>{report.totalFiles.toLocaleString()}</dd>
@@ -57,29 +63,29 @@ export function ResultPanel({
       </dl>
 
       {report.skippedFiles > 0 ? (
-        <div className="notice notice-warning">
+        <div className="notice notice-warning" role="status">
           <strong>{report.skippedFiles} file{report.skippedFiles !== 1 ? 's' : ''} skipped.</strong>
-          {' '}Check <code>conversion-report.md</code> in the output ZIP for details.
+          {' '}See the conversion report at the top of the downloaded <code>.md</code>.
         </div>
       ) : null}
 
       {outputContent ? (
         <div className="output-preview">
           <h3>Output preview</h3>
-          <pre className="preview-content"><code>{outputContent}</code></pre>
+          <pre className="preview-content" tabIndex={0}><code>{outputContent}</code></pre>
         </div>
       ) : null}
 
       <div className="report-summary">
         <h3>Conversion report</h3>
         <p>
-          The output ZIP includes <code>conversion-report.md</code> with skipped
+          The first section of the downloaded <code>.md</code> file lists skipped
           files, failed files, unsafe paths, and warnings.
         </p>
         {report.warnings.length > 0 ? (
           <ul>
-            {report.warnings.slice(0, 5).map((warning) => (
-              <li key={warning}>{warning}</li>
+            {report.warnings.slice(0, 5).map((warning, idx) => (
+              <li key={idx}>{warning}</li>
             ))}
           </ul>
         ) : null}

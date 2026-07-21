@@ -32,7 +32,7 @@ function App() {
   const [progress, setProgress] = useState<ConversionProgress>()
   const [report, setReport] = useState<ConversionReport>()
   const [downloadUrl, setDownloadUrl] = useState<string>()
-  const [outputFilename, setOutputFilename] = useState('')
+  const [outputFilename, setOutputFilename] = useState('markdown-output.md')
   const [outputContent, setOutputContent] = useState<string>()
   const [cancelRequested, setCancelRequested] = useState(false)
   const workerRef = useRef<Worker | undefined>(undefined)
@@ -215,22 +215,21 @@ function App() {
       <header className="app-header">
         <div className="brand">
           <img src="/pwa-icon.svg" alt="" width="40" height="40" />
-          <div>
-            <p className="eyebrow">Local-first PWA</p>
-            <h1>ZIP to Markdown Converter</h1>
+          <div className="brand-text">
+            <span className="brand-name">Zipto</span>
+            <span className="brand-tag">ZIP → Markdown, in your browser</span>
           </div>
         </div>
-        <p className={`status-pill status-${status}`}>{getStatusLabel(status)}</p>
+        <p className={`status-pill status-${status}`} aria-live="polite">{getStatusLabel(status)}</p>
       </header>
 
       <section className="intro">
         <p>
-          Convert supported files inside a ZIP archive into Markdown and export
-          a new ZIP with the original folder structure preserved.
+          Drop a ZIP below. Each supported file inside is converted to a section
+          in one Markdown file, with the original path kept as the heading.
         </p>
-        <p className="privacy-note">
-          All files are processed locally in your browser. Nothing is uploaded
-          to a server.
+        <p className="notice notice-warning">
+          Everything runs locally. No upload, no server.
         </p>
       </section>
 
@@ -241,8 +240,8 @@ function App() {
         />
 
         {status === 'reading' ? (
-          <section className="panel state-panel" aria-live="polite">
-            Reading ZIP structure...
+          <section className="state-panel" aria-label="Reading ZIP">
+            Reading ZIP structure…
           </section>
         ) : null}
 
@@ -288,20 +287,15 @@ function isZipFile(file: File): boolean {
 }
 
 function createOutputFilename(sourceName: string): string {
-  return `${sourceName.replace(/\.zip$/i, '')}-markdown.zip`
+  return `${sourceName.replace(/\.zip$/i, '')}-markdown.md`
 }
 
 async function extractPreviewFromZip(blob: Blob): Promise<string | undefined> {
   try {
-    const { unzipSync, strFromU8 } = await import('fflate')
-    const data = new Uint8Array(await blob.arrayBuffer())
-    const unzipped = unzipSync(data)
-    const mdFile = unzipped['output.md']
-    if (mdFile) {
-      const text = strFromU8(mdFile)
-      const preview = text.slice(0, 500)
-      return text.length > 500 ? preview + '\n\n...' : preview
-    }
+    const previewSlice = blob.slice(0, 4096)
+    const text = await previewSlice.text()
+    const preview = text.slice(0, 500)
+    return blob.size > 4096 ? preview + '\n\n...' : preview
   } catch {
     // silently fail
   }

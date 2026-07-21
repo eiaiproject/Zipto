@@ -16,10 +16,10 @@ When deployed, add the production URL here.
 - No artificial ZIP size limit.
 - No artificial file count limit.
 - Process files locally in the browser.
-- Preserve the original folder structure.
+- Show each source file's original path as a heading in the combined output.
 - Convert TXT, MD, HTML, CSV, JSON, XML, YAML, and LOG files.
 - Skip unsupported files without stopping the batch.
-- Generate `conversion-report.md`.
+- Embed a conversion report as the first section of the output Markdown file.
 - Run conversion in a Web Worker.
 - Show real-time progress.
 - Cancel long-running conversions.
@@ -39,13 +39,13 @@ When deployed, add the production URL here.
 | `.yaml`, `.yml` | `.md` | Wraps content in a YAML fenced code block. |
 | `.log` | `.md` | Wraps content in a LOG fenced code block. |
 
-Unsupported files are skipped and listed in `conversion-report.md`.
+Unsupported files are skipped and listed in the conversion report section of the output file.
 
 ## Privacy & Security
 
 All files are processed locally in your browser. Nothing is uploaded to a server.
 
-The app does not call remote APIs, send file contents to analytics, or use CDN-hosted conversion libraries. ZIP reading, file conversion, report generation, and output ZIP creation all run in the browser.
+The app does not call remote APIs, send file contents to analytics, or use CDN-hosted conversion libraries. ZIP reading, file conversion, report generation, and output Markdown file creation all run in the browser.
 
 The app also sanitizes ZIP entry paths. Unsafe paths such as `../../secret.txt`, absolute paths, and Windows drive paths are not written as-is and are recorded in the conversion report.
 
@@ -71,8 +71,8 @@ Conversion proceeds as far as the user's browser, device memory, CPU, storage, a
 1. The React app handles upload, drag and drop, ZIP summary display, progress UI, cancellation controls, and download links.
 2. ZIP metadata is read locally so the user can review the archive before converting.
 3. Conversion runs in `src/worker/conversion.worker.ts`.
-4. The worker reads ZIP entries, sanitizes paths, converts supported files, skips unsupported files, creates `conversion-report.md`, and generates the output ZIP.
-5. The generated output ZIP preserves the original folder structure for converted Markdown files.
+4. The worker reads ZIP entries, sanitizes paths, converts supported files, skips unsupported files, creates the conversion report, and generates the output Markdown file.
+5. The generated output Markdown file places the conversion report first, followed by one section per converted file, with each section headed by the file's original path.
 6. The service worker precaches the app shell so the app opens offline after the first successful load.
 
 ## Project Structure
@@ -168,10 +168,10 @@ Manual checklist:
 - Select a non-ZIP file and confirm a clear error is shown.
 - Confirm the ZIP summary shows filename, compressed size, detected entries, detected files, and unsafe path count.
 - Convert `.txt`, `.md`, `.html`, `.csv`, `.json`, `.xml`, `.yaml`, `.yml`, and `.log` files.
-- Confirm unsupported files are skipped and recorded in `conversion-report.md`.
+- Confirm unsupported files are skipped and recorded in the conversion report.
 - Confirm paths containing `../` are skipped and listed under unsafe paths.
-- Confirm the output ZIP preserves folder structure.
-- Confirm the output ZIP includes `conversion-report.md`.
+- Confirm the output file is a single `.md` file with the conversion report first.
+- Confirm each converted file's original path appears as a heading in the output.
 - Start a large conversion and cancel it.
 - Build and preview the app, load it once, then confirm it opens offline in a supported browser.
 
@@ -180,8 +180,8 @@ Manual checklist:
 - DOCX and PDF conversion are not included in the MVP.
 - OCR is not included.
 - Files are decoded as text; unusual legacy encodings may not render perfectly.
-- Unsupported file types are skipped and listed in `conversion-report.md`.
-- If multiple input files would write the same Markdown path, later files get a numbered output filename and a report warning.
+- Unsupported file types are skipped and listed in the conversion report section of the output file.
+- Repeated headings in the output (from same-named files in different directories) are cosmetic and not a collision.
 - Very large ZIP files may still be constrained by browser memory, CPU, storage, and device capabilities.
 
 ## Roadmap
