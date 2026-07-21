@@ -58,11 +58,6 @@ export type ConversionReport = {
   unsafePaths: UnsafePathResult[]
 }
 
-export type ConversionOptions = {
-  preserveFolderStructure: true
-  includeConversionReport: true
-}
-
 export type ZipReadResult = {
   entries: ZipEntry[]
   unsafePaths: UnsafePathResult[]
@@ -72,7 +67,6 @@ export type WorkerRequest =
   | {
       type: 'START_CONVERSION'
       file: File
-      options: ConversionOptions
     }
   | {
       type: 'CANCEL'
