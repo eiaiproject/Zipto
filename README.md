@@ -133,24 +133,50 @@ npm run lint
 
 ## Deployment
 
-The app is suitable for static hosting.
+### Cloudflare Pages (recommended)
 
-Cloudflare Pages settings:
+The app is ready for Cloudflare Pages.
 
-| Setting | Value |
-| --- | --- |
-| Framework preset | Vite |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-| Root directory | Project root |
+**Option A — via Git (automatic):**
 
-Recommended environment variable:
+1. Push to GitHub.
+2. In Cloudflare Dashboard → Pages → Create a project → Connect your Git repo.
+3. Use these settings:
 
-```text
-NODE_VERSION=22.12.0
+   | Setting | Value |
+   |---|---|
+   | Framework preset | Vite |
+   | Build command | `npm run build` |
+   | Build output directory | `dist` |
+   | Root directory | (project root) |
+
+4. Set environment variable:
+
+   ```text
+   NODE_VERSION=22.12.0
+   ```
+
+   Vite requires Node `^20.19.0 || >=22.12.0`, so Cloudflare Pages should use a compatible Node version.
+
+**Option B — via wrangler CLI:**
+
+```bash
+npm run deploy
 ```
 
-Vite requires Node `^20.19.0 || >=22.12.0`, so Cloudflare Pages should use a compatible Node version.
+Make sure you are logged in:
+
+```bash
+npx wrangler login
+```
+
+### Files included for Cloudflare
+
+| File | Purpose |
+|---|---|
+| `public/_redirects` | SPA fallback — all routes serve `index.html` |
+| `public/_headers` | Security headers + cache policy for assets |
+| `wrangler.toml` | Wrangler CLI project config |
 
 ## Testing
 

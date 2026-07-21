@@ -1,0 +1,21 @@
+# Security headers
+/*.html
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# Service worker — never cache, must be fresh on each load
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Workbox service worker
+/workbox-*.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# PWA assets — cache aggressively
+/pwa-icon.svg
+  Cache-Control: public, max-age=31536000, immutable
+
+# Build assets — content-hashed, cache forever
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

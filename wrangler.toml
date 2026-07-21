@@ -1,0 +1,8 @@
+# Cloudflare Pages configuration for wrangler CLI
+# https://developers.cloudflare.com/pages/
+
+name = "zipto"
+
+compatibility_date = "2024-12-01"
+
+pages_build_output_dir = "dist"
