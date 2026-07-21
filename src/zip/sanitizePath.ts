@@ -5,7 +5,7 @@ export type SanitizedPath = {
 }
 
 export function sanitizeZipPath(path: string): SanitizedPath {
-  const normalized = path.replaceAll('\u0000', '').replace(/\\/g, '/')
+  const normalized = path.replaceAll('\u0000', '').replaceAll('\\', '/')
   const segments = normalized.split('/')
   const cleanSegments = segments.filter((segment) => segment && segment !== '.')
 

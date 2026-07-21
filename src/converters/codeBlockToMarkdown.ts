@@ -1,6 +1,6 @@
 export function codeBlockToMarkdown(content: string, language: string): string {
   const fence = createFence(content)
-  return `${fence}${language}\n${content.replace(/\s+$/, '')}\n${fence}\n`
+  return `${fence}${language}\n${content.trimEnd()}\n${fence}\n`
 }
 
 function createFence(content: string): string {

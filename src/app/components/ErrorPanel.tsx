@@ -1,6 +1,6 @@
 type ErrorPanelProps = {
-  message?: string
-  details?: string
+  readonly message?: string
+  readonly details?: string
 }
 
 export function ErrorPanel({ message, details }: ErrorPanelProps) {

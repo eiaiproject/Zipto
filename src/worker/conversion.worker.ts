@@ -179,6 +179,72 @@ type StreamParams = {
   postProgress: (currentFile?: string) => void
 }
 
+function createFileDataHandler(
+  params: StreamParams,
+  entry: ZipEntry,
+  onDone: () => void,
+): { ondata: UnzipFile['ondata']; terminate: () => void; cleanup: () => void } {
+  const chunks: Uint8Array[] = []
+  let byteLength = 0
+  let cleanedUp = false
+  let terminated = false
+
+  const cleanup = () => {
+    if (cleanedUp) return
+    cleanedUp = true
+    onDone()
+  }
+
+  const terminate = () => {
+    terminated = true
+    cleanup()
+  }
+
+  const ondata: UnzipFile['ondata'] = (error, chunk, final) => {
+    if (cancelRequested || terminated) {
+      cleanup()
+      return
+    }
+
+    if (error) {
+      params.recordFailed(entry, error.message)
+      cleanup()
+      return
+    }
+
+    if (chunk && chunk.length > 0) {
+      chunks.push(chunk)
+      byteLength += chunk.length
+    }
+
+    if (final) {
+      try {
+        const bytes = concatChunks(chunks, byteLength)
+        const content = decodeText(bytes)
+        const conversion = convertToMarkdown(entry.extension, content)
+        const displayPath = entry.safePath
+
+        params.sections.push(`## ${displayPath}\n\n${conversion.markdown}`)
+        params.warnings.push(
+          ...conversion.warnings.map((warning) => `${entry.path}: ${warning}`),
+        )
+        params.recordConverted(entry, displayPath)
+      } catch (conversionError) {
+        params.recordFailed(
+          entry,
+          conversionError instanceof Error
+            ? conversionError.message
+            : 'Unable to convert file',
+        )
+      } finally {
+        cleanup()
+      }
+    }
+  }
+
+  return { ondata, terminate, cleanup }
+}
+
 function processZipStream(params: StreamParams): Promise<void> {
   const entryMap = new Map(params.fileEntries.map((entry) => [entry.path, entry]))
 
@@ -235,64 +301,12 @@ function processZipStream(params: StreamParams): Promise<void> {
       params.postProgress(entry.path)
       activeFiles += 1
 
-      const chunks: Uint8Array[] = []
-      let byteLength = 0
-      let cleanedUp = false
-      const terminate = () => file.terminate()
-      activeTerminators.add(terminate)
-
-      const cleanup = () => {
-        if (cleanedUp) {
-          return
-        }
-
-        cleanedUp = true
+      const handle = createFileDataHandler(params, entry, () => {
         activeFiles -= 1
-        activeTerminators.delete(terminate)
         finish()
-      }
-
-      file.ondata = (error, chunk, final) => {
-        if (cancelRequested) {
-          cleanup()
-          return
-        }
-
-        if (error) {
-          params.recordFailed(entry, error.message)
-          cleanup()
-          return
-        }
-
-        if (chunk.length > 0) {
-          chunks.push(chunk)
-          byteLength += chunk.length
-        }
-
-        if (final) {
-          try {
-            const bytes = concatChunks(chunks, byteLength)
-            const content = decodeText(bytes)
-            const conversion = convertToMarkdown(entry.extension, content)
-            const displayPath = entry.safePath
-
-            params.sections.push(`## ${displayPath}\n\n${conversion.markdown}`)
-            params.warnings.push(
-              ...conversion.warnings.map((warning) => `${entry.path}: ${warning}`),
-            )
-            params.recordConverted(entry, displayPath)
-          } catch (conversionError) {
-            params.recordFailed(
-              entry,
-              conversionError instanceof Error
-                ? conversionError.message
-                : 'Unable to convert file',
-            )
-          } finally {
-            cleanup()
-          }
-        }
-      }
+      })
+      file.ondata = handle.ondata
+      activeTerminators.add(handle.terminate)
 
       try {
         file.start()
@@ -301,7 +315,7 @@ function processZipStream(params: StreamParams): Promise<void> {
           entry,
           error instanceof Error ? error.message : 'Unable to read file data',
         )
-        cleanup()
+        handle.cleanup()
       }
     })
 
@@ -397,4 +411,4 @@ function postWorkerMessage(message: WorkerResponse) {
 
 
 
-export {}
+

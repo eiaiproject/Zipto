@@ -4,7 +4,9 @@ export function createConversionReportMarkdown(report: ConversionReport): string
   const failedFiles = report.results.filter((r) => r.status === 'failed')
   const skippedFiles = report.results.filter((r) => r.status === 'skipped')
 
-  const statusText = report.cancelled ? 'Cancelled' : report.completed ? 'Completed' : 'Failed'
+  let statusText = 'Failed'
+  if (report.cancelled) statusText = 'Cancelled'
+  else if (report.completed) statusText = 'Completed'
   // ponytail: status icon omitted; replace with inline reicon.dev SVG when assets available
 
   const parts: string[] = [
@@ -26,8 +28,7 @@ export function createConversionReportMarkdown(report: ConversionReport): string
     '',
   ]
 
-  parts.push(`## Failed Files (${failedFiles.length})`)
-  parts.push('')
+  parts.push(`## Failed Files (${failedFiles.length})`, '')
   if (failedFiles.length === 0) {
     parts.push('None.')
   } else {
@@ -37,8 +38,7 @@ export function createConversionReportMarkdown(report: ConversionReport): string
   }
   parts.push('')
 
-  parts.push(`## Skipped Files (${skippedFiles.length})`)
-  parts.push('')
+  parts.push(`## Skipped Files (${skippedFiles.length})`, '')
   if (skippedFiles.length === 0) {
     parts.push('None.')
   } else {
@@ -48,8 +48,7 @@ export function createConversionReportMarkdown(report: ConversionReport): string
   }
   parts.push('')
 
-  parts.push(`## Unsafe Paths (${report.unsafePaths.length})`)
-  parts.push('')
+  parts.push(`## Unsafe Paths (${report.unsafePaths.length})`, '')
   if (report.unsafePaths.length === 0) {
     parts.push('None.')
   } else {
@@ -60,14 +59,10 @@ export function createConversionReportMarkdown(report: ConversionReport): string
   parts.push('')
 
   if (report.warnings.length > 0) {
-    parts.push('## Warnings')
-    parts.push('')
-    parts.push(...report.warnings.map((w) => `- ${w}`))
-    parts.push('')
+    parts.push('## Warnings', '', ...report.warnings.map((w) => `- ${w}`), '')
   }
 
-  parts.push('---')
-  parts.push('')
+  parts.push('---', '')
   parts.push('*All files were processed locally in the browser. No data was uploaded to any server.*')
 
   return parts.join('\n')
@@ -103,7 +98,7 @@ export function formatConversionTimestamp(date = new Date()): string {
 
 
 function escapeBackticks(value: string): string {
-  return value.replace(/`/g, '\\`')
+  return value.replaceAll('`', '\\`')
 }
 
 function pad(value: number): string {

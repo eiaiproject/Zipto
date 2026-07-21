@@ -1,9 +1,9 @@
 import type { ConversionProgress } from '../../types/conversion'
 
 type ProgressPanelProps = {
-  progress: ConversionProgress
-  cancelRequested: boolean
-  onCancel: () => void
+  readonly progress: ConversionProgress
+  readonly cancelRequested: boolean
+  readonly onCancel: () => void
 }
 
 export function ProgressPanel({
@@ -28,9 +28,7 @@ export function ProgressPanel({
         <span className="sr-only" aria-live="polite">{percent}% processed — {progress.processedFiles} of {progress.totalFiles} files</span>
       </div>
 
-      <div className="progress-track" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`${percent}% processed`}>
-        <div className="progress-fill" style={{ width: `${percent}%` }} />
-      </div>
+      <progress className="progress-track" value={percent} max={100} aria-label={`${percent}% processed`} />
 
       <dl className="summary-grid progress-grid">
         <div>

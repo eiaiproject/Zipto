@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
 
 type UploadDropzoneProps = {
-  disabled?: boolean
-  onFileSelected: (file: File) => void
+  readonly disabled?: boolean
+  readonly onFileSelected: (file: File) => void
 }
 
 export function UploadDropzone({

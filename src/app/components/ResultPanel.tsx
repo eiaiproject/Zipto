@@ -1,11 +1,11 @@
 import type { ConversionReport, ConversionStatus } from '../../types/conversion'
 
 type ResultPanelProps = {
-  status: Extract<ConversionStatus, 'completed' | 'cancelled'>
-  report: ConversionReport
-  downloadUrl?: string
-  outputFilename: string
-  outputContent?: string
+  readonly status: Extract<ConversionStatus, 'completed' | 'cancelled'>
+  readonly report: ConversionReport
+  readonly downloadUrl?: string
+  readonly outputFilename: string
+  readonly outputContent?: string
 }
 
 export function ResultPanel({
@@ -63,16 +63,16 @@ export function ResultPanel({
       </dl>
 
       {report.skippedFiles > 0 ? (
-        <div className="notice notice-warning" role="status">
+        <output className="notice notice-warning" role="status">
           <strong>{report.skippedFiles} file{report.skippedFiles !== 1 ? 's' : ''} skipped.</strong>
           {' '}See the conversion report at the top of the downloaded <code>.md</code>.
-        </div>
+        </output>
       ) : null}
 
       {outputContent ? (
         <div className="output-preview">
           <h3>Output preview</h3>
-          <pre className="preview-content" tabIndex={0}><code>{outputContent}</code></pre>
+          <pre className="preview-content" tabIndex={-1}><code>{outputContent}</code></pre>
         </div>
       ) : null}
 
@@ -84,8 +84,8 @@ export function ResultPanel({
         </p>
         {report.warnings.length > 0 ? (
           <ul>
-            {report.warnings.slice(0, 5).map((warning, idx) => (
-              <li key={idx}>{warning}</li>
+            {report.warnings.slice(0, 5).map((warning) => (
+              <li key={warning}>{warning}</li>
             ))}
           </ul>
         ) : null}

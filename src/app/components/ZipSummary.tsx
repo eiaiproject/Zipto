@@ -1,10 +1,10 @@
 import type { UnsafePathResult, ZipEntry } from '../../types/conversion'
 
 type ZipSummaryProps = {
-  file: File
-  entries: ZipEntry[]
-  unsafePaths: UnsafePathResult[]
-  onConvert: () => void
+  readonly file: File
+  readonly entries: ZipEntry[]
+  readonly unsafePaths: UnsafePathResult[]
+  readonly onConvert: () => void
 }
 
 export function ZipSummary({

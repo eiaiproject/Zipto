@@ -22,7 +22,7 @@ function UpdateAvailable() {
   return (
     <div className="update-banner" role="alert">
       <span>Update available — </span>
-      <button onClick={() => updateSWRef.current?.(true)}>Reload</button>
+      <button type="button" onClick={() => updateSWRef.current?.(true)}>Reload</button>
     </div>
   )
 }
