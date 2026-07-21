@@ -6,7 +6,6 @@ import {
   formatConversionTimestamp,
 } from '../report/createConversionReport'
 import type {
-  ConversionOptions,
   ConversionResult,
   UnsafePathResult,
   WorkerRequest,
@@ -17,7 +16,7 @@ import { createOutputZip, markdownToBytes, type OutputZipFiles } from '../zip/cr
 import { readZipEntriesFromData } from '../zip/readZip'
 
 
-const textDecoder = new TextDecoder()
+const TEXT_DECODER = new TextDecoder()
 const streamChunkBytes = 64 * 1024
 
 let cancelRequested = false
@@ -37,7 +36,7 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
   }
 }
 
-async function startConversion(request: Extract<WorkerRequest, { type: 'START_CONVERSION' }>) {
+async function startConversion(request: WorkerRequest & { type: 'START_CONVERSION' }) {
   running = true
   cancelRequested = false
 
@@ -118,7 +117,6 @@ async function startConversion(request: Extract<WorkerRequest, { type: 'START_CO
     await processZipStream({
       data,
       fileEntries,
-      options: request.options,
       outputFiles,
       sections,
       warnings,
@@ -144,13 +142,13 @@ async function startConversion(request: Extract<WorkerRequest, { type: 'START_CO
       unsafePaths,
     })
 
-    if (request.options.includeConversionReport) {
-      outputFiles['conversion-report.md'] = markdownToBytes(
-        createConversionReportMarkdown(report),
-      )
-    }
+    outputFiles['conversion-report.md'] = markdownToBytes(
+      createConversionReportMarkdown(report),
+    )
 
-    outputFiles['output.md'] = markdownToBytes(sections.join('\n\n'))
+    outputFiles['output.md'] = markdownToBytes(
+      buildOutputMarkdown(sections, request.file.name, totalFiles, convertedFiles, skippedFiles, failedFiles),
+    )
     const outputBlob = createOutputZip(outputFiles)
 
     if (cancelled) {
@@ -185,7 +183,6 @@ async function startConversion(request: Extract<WorkerRequest, { type: 'START_CO
 type StreamParams = {
   data: Uint8Array
   fileEntries: ZipEntry[]
-  options: ConversionOptions
   outputFiles: OutputZipFiles
   sections: string[]
   warnings: string[]
@@ -240,10 +237,6 @@ function processZipStream(params: StreamParams): Promise<void> {
 
 
 
-      if (entry.extension === 'md') {
-        // ponytail: always include markdown as-is in combined output
-      }
-
       params.postProgress(entry.path)
       activeFiles += 1
 
@@ -286,7 +279,7 @@ function processZipStream(params: StreamParams): Promise<void> {
             const bytes = concatChunks(chunks, byteLength)
             const content = decodeText(bytes)
             const conversion = convertToMarkdown(entry.extension, content)
-            const displayPath = params.options.preserveFolderStructure ? entry.safePath : entry.name
+            const displayPath = entry.safePath
 
             params.sections.push(`## ${displayPath}\n\n${conversion.markdown}`)
             params.warnings.push(
@@ -390,7 +383,7 @@ function concatChunks(chunks: Uint8Array[], byteLength: number): Uint8Array {
 
 function decodeText(bytes: Uint8Array): string {
   try {
-    return textDecoder.decode(bytes)
+    return TEXT_DECODER.decode(bytes)
   } catch {
     return strFromU8(bytes)
   }
@@ -405,6 +398,48 @@ function yieldToWorker(): Promise<void> {
 
 function postWorkerMessage(message: WorkerResponse) {
   self.postMessage(message)
+}
+
+function buildOutputMarkdown(
+  sections: string[],
+  sourceZipName: string,
+  totalFiles: number,
+  convertedFiles: number,
+  skippedFiles: number,
+  failedFiles: number,
+): string {
+  const timestamp = formatConversionTimestamp()
+  const header = `# ZIP to Markdown Output
+
+**Source ZIP:** \`${sourceZipName}\`
+**Converted at:** ${timestamp}
+**Total files:** ${totalFiles} | **Converted:** ${convertedFiles} | **Skipped:** ${skippedFiles} | **Failed:** ${failedFiles}
+
+## Table of Contents
+
+${generateToc(sections)}
+
+---
+
+`
+  return header + sections.join('\n\n---\n\n') + '\n'
+}
+
+function generateToc(sections: string[]): string {
+  const headingRegex = /^##\s+(.+)$/m
+  return sections
+    .map((section) => {
+      const match = headingRegex.exec(section)
+      if (!match) return null
+      const title = match[1]!
+      const anchor = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+      return `- [${title}](#${anchor})`
+    })
+    .filter((item): item is string => item !== null)
+    .join('\n')
 }
 
 export {}
