@@ -1,41 +1,76 @@
 import type { ConversionReport, ConversionResult, UnsafePathResult } from '../types/conversion'
 
 export function createConversionReportMarkdown(report: ConversionReport): string {
-  const failedFiles = report.results.filter((result) => result.status === 'failed')
-  const skippedFiles = report.results.filter((result) => result.status === 'skipped')
-  const status = report.cancelled ? 'Cancelled' : report.completed ? 'Completed' : 'Failed'
+  const failedFiles = report.results.filter((r) => r.status === 'failed')
+  const skippedFiles = report.results.filter((r) => r.status === 'skipped')
 
-  return `# Conversion Report
+  const statusIcon = report.cancelled ? '⚠️' : report.completed ? '✅' : '❌'
+  const statusText = report.cancelled ? 'Cancelled' : report.completed ? 'Completed' : 'Failed'
 
-Source ZIP: ${report.sourceZipName}
-Converted at: ${report.convertedAt}
+  const parts: string[] = [
+    '# Conversion Report',
+    '',
+    `**Source ZIP:** \`${report.sourceZipName}\``,
+    `**Converted at:** ${report.convertedAt}`,
+    `**Status:** ${statusIcon} ${statusText}`,
+    '',
+    '## Summary',
+    '',
+    '| Metric | Count |',
+    '|--------|------:|',
+    `| Total files | ${report.totalFiles} |`,
+    `| Processed | ${report.processedFiles} |`,
+    `| Converted | ${report.convertedFiles} |`,
+    `| Skipped | ${report.skippedFiles} |`,
+    `| Failed | ${report.failedFiles} |`,
+    '',
+  ]
 
-## Summary
+  parts.push(`## Failed Files (${failedFiles.length})`)
+  parts.push('')
+  if (failedFiles.length === 0) {
+    parts.push('None.')
+  } else {
+    parts.push(...failedFiles.map((f) => {
+      return `- \`${escapeBackticks(f.sourcePath)}\` — ${f.reason ?? 'Unknown error'}`
+    }))
+  }
+  parts.push('')
 
-- Status: ${status}
-- Total files: ${report.totalFiles}
-- Processed files: ${report.processedFiles}
-- Converted: ${report.convertedFiles}
-- Skipped: ${report.skippedFiles}
-- Failed: ${report.failedFiles}
+  parts.push(`## Skipped Files (${skippedFiles.length})`)
+  parts.push('')
+  if (skippedFiles.length === 0) {
+    parts.push('None.')
+  } else {
+    parts.push(...skippedFiles.map((f) => {
+      return `- \`${escapeBackticks(f.sourcePath)}\` — ${f.reason ?? 'Unknown reason'}`
+    }))
+  }
+  parts.push('')
 
-## Failed Files
+  parts.push(`## Unsafe Paths (${report.unsafePaths.length})`)
+  parts.push('')
+  if (report.unsafePaths.length === 0) {
+    parts.push('None.')
+  } else {
+    parts.push(...report.unsafePaths.map((p) => {
+      return `- \`${escapeBackticks(p.path)}\` — ${p.reason} (${p.action})`
+    }))
+  }
+  parts.push('')
 
-${formatResults(failedFiles)}
+  if (report.warnings.length > 0) {
+    parts.push('## Warnings')
+    parts.push('')
+    parts.push(...report.warnings.map((w) => `- ${w}`))
+    parts.push('')
+  }
 
-## Skipped Files
+  parts.push('---')
+  parts.push('')
+  parts.push('*All files were processed locally in the browser. No data was uploaded to any server.*')
 
-${formatResults(skippedFiles)}
-
-## Unsafe Paths
-
-${formatUnsafePaths(report.unsafePaths)}
-
-## Notes
-
-- All files were processed locally in the browser.
-${formatWarnings(report.warnings)}
-`
+  return parts.join('\n')
 }
 
 export function createReport(params: {
@@ -65,40 +100,7 @@ export function formatConversionTimestamp(date = new Date()): string {
   return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
-function formatResults(results: ConversionResult[]): string {
-  if (results.length === 0) {
-    return 'None.'
-  }
 
-  return results
-    .map((result) => {
-      return `- \`${escapeBackticks(result.sourcePath)}\`
-  - Reason: ${result.reason ?? 'Unknown'}`
-    })
-    .join('\n')
-}
-
-function formatUnsafePaths(paths: UnsafePathResult[]): string {
-  if (paths.length === 0) {
-    return 'None.'
-  }
-
-  return paths
-    .map((path) => {
-      return `- \`${escapeBackticks(path.path)}\`
-  - Action: ${path.action}
-  - Reason: ${path.reason}`
-    })
-    .join('\n')
-}
-
-function formatWarnings(warnings: string[]): string {
-  if (warnings.length === 0) {
-    return ''
-  }
-
-  return warnings.map((warning) => `- ${warning}`).join('\n')
-}
 
 function escapeBackticks(value: string): string {
   return value.replace(/`/g, '\\`')
