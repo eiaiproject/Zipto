@@ -1,6 +1,6 @@
 import { codeBlockToMarkdown } from './codeBlockToMarkdown'
 import { csvToMarkdown } from './csvToMarkdown'
-import { htmlToMarkdown } from './htmlToMarkdown'
+// import { htmlToMarkdown } from './htmlToMarkdown'
 import { jsonToMarkdown } from './jsonToMarkdown'
 import { txtToMarkdown } from './txtToMarkdown'
 
@@ -97,7 +97,7 @@ export function convertToMarkdown(
       return jsonToMarkdown(content)
     case 'html':
     case 'htm':
-      return { markdown: htmlToMarkdown(content), warnings: [] }
+      return { markdown: codeBlockToMarkdown(content, 'html'), warnings: [] }
     case 'txt':
     case 'md':
     case 'markdown':

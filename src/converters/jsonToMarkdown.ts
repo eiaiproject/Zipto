@@ -6,16 +6,15 @@ export type JsonConversion = {
 }
 
 export function jsonToMarkdown(content: string): JsonConversion {
+  let warning: string | undefined
   try {
-    const parsed = JSON.parse(content) as unknown
-    return {
-      markdown: codeBlockToMarkdown(JSON.stringify(parsed, null, 2), 'json'),
-      warnings: [],
-    }
+    JSON.parse(content) as unknown
   } catch {
-    return {
-      markdown: codeBlockToMarkdown(content, 'json'),
-      warnings: ['Invalid JSON kept as original text inside a json code block.'],
-    }
+    warning = 'Invalid JSON kept as original text inside a json code block.'
+  }
+
+  return {
+    markdown: codeBlockToMarkdown(content, 'json'),
+    warnings: warning ? [warning] : [],
   }
 }

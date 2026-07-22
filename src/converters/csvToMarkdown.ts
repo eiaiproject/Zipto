@@ -47,5 +47,5 @@ function markdownTableRow(cells: string[]): string {
 }
 
 function escapeCell(cell: string): string {
-  return cell.replace(/\r?\n/g, ' ').replaceAll('|', String.raw`\|`).trim()
+  return cell.replace(/\r?\n/g, '<br>').replaceAll('|', String.raw`\|`).trim()
 }
