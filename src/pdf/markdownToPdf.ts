@@ -45,35 +45,33 @@ const INLINE_MARKERS: MarkerDef[] = [
   { open: '_', close: '_', styles: { italic: true } },
 ]
 
+function findInlineMatch(remaining: string): { prefix: string; content: string; styles: TextStyle; rest: string } | null {
+  for (const { open, close, styles } of INLINE_MARKERS) {
+    const openIdx = remaining.indexOf(open)
+    if (openIdx === -1) continue
+    const contentStart = openIdx + open.length
+    const closeIdx = remaining.indexOf(close, contentStart)
+    if (closeIdx === -1) continue
+    const content = remaining.slice(contentStart, closeIdx)
+    if (content.length === 0) continue
+    return {
+      prefix: remaining.slice(0, openIdx),
+      content,
+      styles,
+      rest: remaining.slice(closeIdx + close.length),
+    }
+  }
+  return null
+}
+
 function parseInline(text: string): InlineSeg[] {
   const segments: InlineSeg[] = []
   let remaining = text
 
   while (remaining.length > 0) {
-    let matched: { prefix: string; content: string; styles: TextStyle; rest: string } | null = null
-
-    for (const { open, close, styles } of INLINE_MARKERS) {
-      const openIdx = remaining.indexOf(open)
-      if (openIdx === -1) continue
-      const contentStart = openIdx + open.length
-      const closeIdx = remaining.indexOf(close, contentStart)
-      if (closeIdx === -1) continue
-      const content = remaining.slice(contentStart, closeIdx)
-      if (content.length === 0) continue
-
-      matched = {
-        prefix: remaining.slice(0, openIdx),
-        content,
-        styles,
-        rest: remaining.slice(closeIdx + close.length),
-      }
-      break
-    }
-
+    const matched = findInlineMatch(remaining)
     if (matched) {
-      if (matched.prefix) {
-        segments.push({ text: matched.prefix, styles: {} })
-      }
+      if (matched.prefix) segments.push({ text: matched.prefix, styles: {} })
       segments.push({ text: matched.content, styles: matched.styles })
       remaining = matched.rest
     } else {
@@ -89,7 +87,7 @@ function parseInline(text: string): InlineSeg[] {
 
 const TABLE_LINE_RE = /^\|[^|]+\|$/
 const BULLET_RE = /^[-*]\s+(.*)/
-const NUMBERED_RE = /^(\d+)\.\s+(.*)$/
+const NUMBERED_RE = /^(\d+)\.\s+(.*)/
 
 function tryCodeBlock(lines: string[], i: number): { block: Block | null; nextI: number } {
   const trimmed = lines[i].trim()
@@ -216,6 +214,19 @@ function applyStyle(doc: jsPDF, styles: TextStyle): void {
   }
 }
 
+function splitWords(text: string): string[] {
+  const parts: string[] = []
+  let remaining = text
+  while (remaining.length > 0) {
+    const nonWs = /^\S+/.exec(remaining)
+    if (nonWs) { parts.push(nonWs[0]); remaining = remaining.slice(nonWs[0].length); continue }
+    const ws = /^\s+/.exec(remaining)
+    if (ws) { parts.push(ws[0]); remaining = remaining.slice(ws[0].length); continue }
+    break
+  }
+  return parts
+}
+
 /**
  * Render inline text with mixed styles (bold, italic, code) using word-level
  * wrapping. Returns the number of lines consumed and the total height used.
@@ -248,21 +259,11 @@ function writeInlineText(
   }
   const tokens: Token[] = []
   for (const seg of segments) {
-    // Split into words: non-whitespace runs and whitespace runs
-    const parts: string[] = []
-    let segRemaining = seg.text
-    while (segRemaining.length > 0) {
-      const nonWs = /^\S+/.exec(segRemaining)
-      if (nonWs) { parts.push(nonWs[0]); segRemaining = segRemaining.slice(nonWs[0].length); continue }
-      const ws = /^\s+/.exec(segRemaining)
-      if (ws) { parts.push(ws[0]); segRemaining = segRemaining.slice(ws[0].length); continue }
-      // Should not reach here for typical text
-      break
-    }
-    for (const part of parts) {
+    for (const part of splitWords(seg.text)) {
       tokens.push({ text: part, styles: seg.styles })
     }
   }
+
 
   let currentX = x
   let currentY = y
