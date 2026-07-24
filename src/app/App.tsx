@@ -297,7 +297,8 @@ async function extractPreviewFromZip(blob: Blob): Promise<string | undefined> {
     const sepIdx = head.indexOf(sep)
     const raw = sepIdx !== -1 ? head.slice(sepIdx + sep.length) : head
     const preview = raw.slice(0, 500)
-    return blob.size > (sepIdx !== -1 ? sepIdx + sep.length + 500 : 500) ? preview + '\n\n...' : preview
+    const hasMoreContent = blob.size > (sepIdx !== -1 ? sepIdx + sep.length + 500 : 500)
+    return hasMoreContent ? preview + '\n\n...' : preview
   } catch {
     return undefined
   }
