@@ -32,7 +32,7 @@ export function ZipSummary({
           disabled={files.length === 0}
           onClick={onConvert}
         >
-          Convert to Markdown
+          Convert Now
         </button>
       </div>
 

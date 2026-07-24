@@ -4,7 +4,7 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './app/App.tsx'
 
-function UpdateAvailable() {
+export function UpdateAvailable() {
   const [show, setShow] = useState(false)
   const updateSWRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null)
 

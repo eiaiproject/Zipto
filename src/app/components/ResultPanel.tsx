@@ -1,4 +1,5 @@
 import type { ConversionReport, ConversionStatus } from '../../types/conversion'
+import { markdownToPdfBlob } from '../../pdf/markdownToPdf'
 
 type ResultPanelProps = {
   readonly status: Extract<ConversionStatus, 'completed' | 'cancelled'>
@@ -6,6 +7,7 @@ type ResultPanelProps = {
   readonly downloadUrl?: string
   readonly outputFilename: string
   readonly outputContent?: string
+  readonly outputBlob?: Blob
 }
 
 export function ResultPanel({
@@ -14,6 +16,7 @@ export function ResultPanel({
   downloadUrl,
   outputFilename,
   outputContent,
+  outputBlob,
 }: ResultPanelProps) {
   return (
     <section className="panel result-panel">
@@ -24,15 +27,38 @@ export function ResultPanel({
         <h2 className="result-title">
           {status === 'completed' ? 'Conversion complete' : 'Conversion cancelled'}
         </h2>
-        {downloadUrl ? (
-          <a
-            className="button button-primary result-action"
-            href={downloadUrl}
-            download={outputFilename}
-          >
-            Download Markdown
-          </a>
-        ) : null}
+        <div className="result-actions" style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+          {downloadUrl ? (
+            <a
+              className="button button-primary result-action"
+              href={downloadUrl}
+              download={outputFilename}
+            >
+              Download Markdown
+            </a>
+          ) : null}
+          {outputBlob ? (
+            <button
+              className="button button-secondary result-action"
+              type="button"
+              onClick={async () => {
+                if (!outputBlob) return
+                const text = await outputBlob.text()
+                const pdfBlob = markdownToPdfBlob(text)
+                const url = URL.createObjectURL(pdfBlob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = outputFilename.replace(/\.md$/i, '.pdf')
+                document.body.appendChild(a)
+                a.click()
+                a.remove()
+                URL.revokeObjectURL(url)
+              }}
+            >
+              Download PDF
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <dl className="summary-grid result-grid">

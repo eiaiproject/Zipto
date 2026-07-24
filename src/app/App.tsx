@@ -34,6 +34,7 @@ function App() {
   const [downloadUrl, setDownloadUrl] = useState<string>()
   const [outputFilename, setOutputFilename] = useState('markdown-output.md')
   const [outputContent, setOutputContent] = useState<string>()
+  const [outputBlob, setOutputBlob] = useState<Blob>()
   const [cancelRequested, setCancelRequested] = useState(false)
   const workerRef = useRef<Worker | undefined>(undefined)
   const downloadUrlRef = useRef<string | undefined>(undefined)
@@ -161,7 +162,7 @@ function App() {
 
   function handleWorkerResult(
     nextStatus: Extract<ConversionStatus, 'completed' | 'cancelled'>,
-    outputBlob: Blob | undefined,
+    blob: Blob | undefined,
     nextReport: ConversionReport | undefined,
   ) {
     setStatus(nextStatus)
@@ -172,14 +173,15 @@ function App() {
       setProgress(reportToProgress(nextReport, nextStatus))
     }
 
-    if (outputBlob && sourceFile) {
-      const url = URL.createObjectURL(outputBlob)
+    if (blob && sourceFile) {
+      const url = URL.createObjectURL(blob)
       downloadUrlRef.current = url
       setDownloadUrl(url)
       setOutputFilename(createOutputFilename(sourceFile.name))
+      setOutputBlob(blob)
 
       if (nextStatus === 'completed' && nextReport?.convertedFiles) {
-        extractPreviewFromZip(outputBlob).then(setOutputContent).catch(() => {
+        extractPreviewFromZip(blob).then(setOutputContent).catch(() => {
           // Preview is optional; ignore failures
         })
       }
@@ -217,7 +219,7 @@ function App() {
           <img src="/pwa-icon.svg" alt="" width="40" height="40" />
           <div className="brand-text">
             <span className="brand-name">Zipto</span>
-            <span className="brand-tag">ZIP → Markdown, in your browser</span>
+            <span className="brand-tag">ZIP → Other Formats, in your browser</span>
           </div>
         </div>
         <p className={`status-pill status-${status}`} aria-live="polite">{getStatusLabel(status)}</p>
@@ -226,7 +228,7 @@ function App() {
       <section className="intro">
         <p>
           Drop a ZIP below. Each supported file inside is converted to a section
-          in one Markdown file, with the original path kept as the heading.
+          in one Markdown & PDF file, with the original path kept as the heading.
         </p>
         <p className="notice notice-warning">
           Everything runs locally. No upload, no server.
@@ -271,6 +273,7 @@ function App() {
             downloadUrl={downloadUrl}
             outputFilename={outputFilename}
             outputContent={outputContent}
+            outputBlob={outputBlob}
           />
         ) : null}
       </div>
