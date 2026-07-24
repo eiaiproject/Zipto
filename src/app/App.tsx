@@ -292,14 +292,15 @@ function createOutputFilename(sourceName: string): string {
 
 async function extractPreviewFromZip(blob: Blob): Promise<string | undefined> {
   try {
-    const previewSlice = blob.slice(0, 4096)
-    const text = await previewSlice.text()
-    const preview = text.slice(0, 500)
-    return blob.size > 4096 ? preview + '\n\n...' : preview
+    const head = await blob.slice(0, 24576).text()
+    const sep = '\n\n---\n\n'
+    const sepIdx = head.indexOf(sep)
+    const raw = sepIdx !== -1 ? head.slice(sepIdx + sep.length) : head
+    const preview = raw.slice(0, 500)
+    return blob.size > (sepIdx !== -1 ? sepIdx + sep.length + 500 : 500) ? preview + '\n\n...' : preview
   } catch {
-    // silently fail
+    return undefined
   }
-  return undefined
 }
 
 function reportToProgress(
