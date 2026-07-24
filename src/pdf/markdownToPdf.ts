@@ -542,7 +542,7 @@ export function markdownToPdfBlob(markdown: string): Blob {
 
   const blocks = parseBlocks(markdown)
 
-  const renderBlock: Record<string, (b: Block) => void> = {
+  const renderBlock: Record<string, (b: any) => void> = {
     h1: (b) => renderHeading(doc, b.text, checkSpace, yRef, { size: 18, color: [40, 35, 30], lineH: 8, gap: 6 }),
     h2: (b) => renderHeading(doc, b.text, checkSpace, yRef, { size: 14, color: [50, 45, 40], lineH: 7, gap: 4 }),
     h3: (b) => renderHeading(doc, b.text, checkSpace, yRef, { size: 12, color: [70, 65, 60], lineH: 6, gap: 3 }),
@@ -551,7 +551,7 @@ export function markdownToPdfBlob(markdown: string): Blob {
     numbered: (b) => renderListBlock(doc, b.text, b.indent ?? 10, checkSpace, yRef, `${b.number}.`, -8),
     code: (b) => renderCodeBlock(doc, b.text, b.lang, checkSpace, yRef),
     table: (b) => { const h = drawTable(doc, b.rows, MARGIN, y, BODY_W); y += h + 4; },
-    hr: (b) => renderHr(doc, checkSpace, yRef),
+    hr: (_b: any) => renderHr(doc, checkSpace, yRef),
     body: (b) => renderBody(doc, b.text, b.indent ?? 0, checkSpace, yRef),
   }
   for (const block of blocks) renderBlock[block.type]?.(block)
