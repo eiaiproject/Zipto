@@ -17,6 +17,6 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
-      - uses: SonarSource/sonarcloud-github-action@ba3875ecf642b2129de2b589510c81a8b53dbf4e # v4
+      - uses: sonarsource/sonarqube-scan-action@ad8210318ac8bb816e41990d5af2b304f7a6c213 # v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
