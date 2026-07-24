@@ -29,71 +29,47 @@ type InlineSeg = { text: string; styles: TextStyle }
 
 // ── Inline parsing --------------------------------------------------------
 
-interface InlineMatcher {
-  regex: RegExp
-  build: (match: RegExpExecArray) => { prefix: string; content: string; styles: TextStyle } | null
+interface MarkerDef {
+  open: string
+  close: string
+  styles: TextStyle
 }
 
-const CODE_RE = /^([^`]*)`([^`]+)`(.*)$/
-const BOLD_ITALIC_STAR_RE = /^([^*]*)\*\*\*(\S+)\*\*\*(.*)$/
-const BOLD_ITALIC_UND_RE = /^([^_]*)___(\S+)___(.*)$/
-const BOLD_STAR_RE = /^([^*]*)\*\*(\S+)\*\*(.*)$/
-const BOLD_UND_RE = /^([^_]*)__(\S+)__(.*)$/
-const ITALIC_STAR_RE = /^([^*]*)\*(\S+)\*(.*)$/
-const ITALIC_UND_RE = /^([^_]*)_(\S+)_(.*)$/
-
-const INLINE_MATCHERS: InlineMatcher[] = [
-  {
-    regex: CODE_RE,
-    build: (m) => m[1] !== undefined
-      ? { prefix: m[1], content: m[2], styles: { code: true } }
-      : null,
-  },
-  {
-    regex: BOLD_ITALIC_STAR_RE,
-    build: (m) => ({ prefix: m[1], content: m[2], styles: { bold: true, italic: true } }),
-  },
-  {
-    regex: BOLD_ITALIC_UND_RE,
-    build: (m) => ({ prefix: m[1], content: m[2], styles: { bold: true, italic: true } }),
-  },
-  {
-    regex: BOLD_STAR_RE,
-    build: (m) => ({ prefix: m[1], content: m[2], styles: { bold: true } }),
-  },
-  {
-    regex: BOLD_UND_RE,
-    build: (m) => ({ prefix: m[1], content: m[2], styles: { bold: true } }),
-  },
-  {
-    regex: ITALIC_STAR_RE,
-    build: (m) => ({ prefix: m[1], content: m[2], styles: { italic: true } }),
-  },
-  {
-    regex: ITALIC_UND_RE,
-    build: (m) => ({ prefix: m[1], content: m[2], styles: { italic: true } }),
-  },
+const INLINE_MARKERS: MarkerDef[] = [
+  { open: '`', close: '`', styles: { code: true } },
+  { open: '***', close: '***', styles: { bold: true, italic: true } },
+  { open: '___', close: '___', styles: { bold: true, italic: true } },
+  { open: '**', close: '**', styles: { bold: true } },
+  { open: '__', close: '__', styles: { bold: true } },
+  { open: '*', close: '*', styles: { italic: true } },
+  { open: '_', close: '_', styles: { italic: true } },
 ]
-
-function tryMatchInline(remaining: string): { prefix: string; content: string; styles: TextStyle; rest: string } | null {
-  for (const matcher of INLINE_MATCHERS) {
-    const m = matcher.regex.exec(remaining)
-    if (m) {
-      const result = matcher.build(m)
-      if (result) {
-        return { ...result, rest: m[3] }
-      }
-    }
-  }
-  return null
-}
 
 function parseInline(text: string): InlineSeg[] {
   const segments: InlineSeg[] = []
   let remaining = text
 
   while (remaining.length > 0) {
-    const matched = tryMatchInline(remaining)
+    let matched: { prefix: string; content: string; styles: TextStyle; rest: string } | null = null
+
+    for (const { open, close, styles } of INLINE_MARKERS) {
+      const openIdx = remaining.indexOf(open)
+      if (openIdx === -1) continue
+      const contentStart = openIdx + open.length
+      const closeIdx = remaining.indexOf(close, contentStart)
+      if (closeIdx === -1) continue
+      const content = remaining.slice(contentStart, closeIdx)
+      if (content.length === 0) continue
+
+      matched = {
+        prefix: remaining.slice(0, openIdx),
+        content,
+        styles,
+        rest: remaining.slice(closeIdx + close.length),
+      }
+      break
+    }
+
     if (matched) {
       if (matched.prefix) {
         segments.push({ text: matched.prefix, styles: {} })
@@ -111,8 +87,8 @@ function parseInline(text: string): InlineSeg[] {
 
 // ── Block parsing helpers -------------------------------------------------
 
-const TABLE_LINE_RE = /^\|.+\|$/
-const BULLET_RE = /^[-*]\s+(.*)$/
+const TABLE_LINE_RE = /^\|[^|]+\|$/
+const BULLET_RE = /^[-*]\s+(.*)/
 const NUMBERED_RE = /^(\d+)\.\s+(.*)$/
 
 function tryCodeBlock(lines: string[], i: number): { block: Block | null; nextI: number } {
@@ -393,14 +369,14 @@ function drawTableRow(
   doc: jsPDF,
   rows: string[][],
   r: number,
-  colCount: number,
-  colWidth: number,
-  padX: number,
   rowH: number,
   x: number,
   currentY: number,
   tableWidth: number,
 ): number {
+  const colCount = rows[0].length
+  const colWidth = tableWidth / colCount
+  const padX = 1.5
   currentY = ensureSpace(doc, currentY, rowH)
 
   if (r % 2 === 0) {
@@ -438,27 +414,27 @@ function drawTable(doc: jsPDF, rows: string[][], x: number, y: number, tableMaxW
 
   // Data rows
   for (let r = 1; r < rows.length; r++) {
-    currentY = drawTableRow(doc, rows, r, colCount, colWidth, padX, rowHeights[r], x, currentY, tableMaxWidth)
+    currentY = drawTableRow(doc, rows, r, rowHeights[r], x, currentY, tableMaxWidth)
   }
 
   doc.setTextColor(0, 0, 0)
   return currentY - y + 2
 }
 
-// ── Block renderers (extracted to reduce markdownToPdfBlob complexity) ----
+// ── Block renderers -------------------------------------------------------
 
 function renderHeading(
   doc: jsPDF, text: string, checkSpace: (n: number) => void,
   yRef: { value: number },
-  size: number, r: number, g: number, b: number, lineH: number, gap: number,
+  opts: { size: number; color: [number, number, number]; lineH: number; gap: number },
 ): void {
-  checkSpace(size + 4)
+  checkSpace(opts.size + 4)
   doc.setFont(FONT, 'bold')
-  doc.setFontSize(size)
-  doc.setTextColor(r, g, b)
+  doc.setFontSize(opts.size)
+  doc.setTextColor(opts.color[0], opts.color[1], opts.color[2])
   const lines = doc.splitTextToSize(text, BODY_W) as string[]
   doc.text(lines, MARGIN, yRef.value)
-  yRef.value += lines.length * lineH + gap
+  yRef.value += lines.length * opts.lineH + opts.gap
   doc.setTextColor(0, 0, 0)
 }
 
@@ -566,20 +542,19 @@ export function markdownToPdfBlob(markdown: string): Blob {
 
   const blocks = parseBlocks(markdown)
 
-  for (const block of blocks) {
-    switch (block.type) {
-      case 'h1': renderHeading(doc, block.text, checkSpace, yRef, 18, 40, 35, 30, 8, 6); break
-      case 'h2': renderHeading(doc, block.text, checkSpace, yRef, 14, 50, 45, 40, 7, 4); break
-      case 'h3': renderHeading(doc, block.text, checkSpace, yRef, 12, 70, 65, 60, 6, 3); break
-      case 'blockquote': renderBlockquote(doc, block.text, checkSpace, yRef); break
-      case 'bullet': renderListBlock(doc, block.text, block.indent ?? 10, checkSpace, yRef, '•', -5); break
-      case 'numbered': renderListBlock(doc, block.text, block.indent ?? 10, checkSpace, yRef, `${block.number}.`, -8); break
-      case 'code': renderCodeBlock(doc, block.text, block.lang, checkSpace, yRef); break
-      case 'table': { const h = drawTable(doc, block.rows, MARGIN, y, BODY_W); y += h + 4; break }
-      case 'hr': renderHr(doc, checkSpace, yRef); break
-      case 'body': renderBody(doc, block.text, block.indent ?? 0, checkSpace, yRef); break
-    }
+  const renderBlock: Record<string, (b: Block) => void> = {
+    h1: (b) => renderHeading(doc, b.text, checkSpace, yRef, { size: 18, color: [40, 35, 30], lineH: 8, gap: 6 }),
+    h2: (b) => renderHeading(doc, b.text, checkSpace, yRef, { size: 14, color: [50, 45, 40], lineH: 7, gap: 4 }),
+    h3: (b) => renderHeading(doc, b.text, checkSpace, yRef, { size: 12, color: [70, 65, 60], lineH: 6, gap: 3 }),
+    blockquote: (b) => renderBlockquote(doc, b.text, checkSpace, yRef),
+    bullet: (b) => renderListBlock(doc, b.text, b.indent ?? 10, checkSpace, yRef, '•', -5),
+    numbered: (b) => renderListBlock(doc, b.text, b.indent ?? 10, checkSpace, yRef, `${b.number}.`, -8),
+    code: (b) => renderCodeBlock(doc, b.text, b.lang, checkSpace, yRef),
+    table: (b) => { const h = drawTable(doc, b.rows, MARGIN, y, BODY_W); y += h + 4; },
+    hr: (b) => renderHr(doc, checkSpace, yRef),
+    body: (b) => renderBody(doc, b.text, b.indent ?? 0, checkSpace, yRef),
   }
+  for (const block of blocks) renderBlock[block.type]?.(block)
 
   const totalPages = doc.getNumberOfPages()
   for (let i = 1; i <= totalPages; i++) {
