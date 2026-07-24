@@ -249,35 +249,48 @@ function App() {
 
         <ErrorPanel message={error?.message} details={error?.details} />
 
-        {sourceFile && status === 'ready' ? (
-          <ZipSummary
-            file={sourceFile}
-            entries={entries}
-            unsafePaths={unsafePaths}
-            onConvert={startConversion}
-          />
-        ) : null}
-
-        {status === 'converting' && progress ? (
-          <ProgressPanel
-            progress={progress}
-            cancelRequested={cancelRequested}
-            onCancel={cancelConversion}
-          />
-        ) : null}
-
-        {(status === 'completed' || status === 'cancelled') && report ? (
-          <ResultPanel
-            status={status}
-            report={report}
-            downloadUrl={downloadUrl}
-            outputFilename={outputFilename}
-            outputContent={outputContent}
-            outputBlob={outputBlob}
-          />
-        ) : null}
+        {renderZipSummary(sourceFile, status, entries, unsafePaths, startConversion)}
+        {renderProgressPanel(status, progress, cancelRequested, cancelConversion)}
+        {renderResultPanel(status, report, downloadUrl, outputFilename, outputContent, outputBlob)}
       </div>
     </main>
+  )
+}
+
+function renderZipSummary(sourceFile: File | undefined, status: string, entries: ZipEntry[], unsafePaths: UnsafePathResult[], startConversion: () => void) {
+  if (!(sourceFile && status === 'ready')) return null
+  return (
+    <ZipSummary
+      file={sourceFile}
+      entries={entries}
+      unsafePaths={unsafePaths}
+      onConvert={startConversion}
+    />
+  )
+}
+
+function renderProgressPanel(status: string, progress: ConversionProgress | undefined, cancelRequested: boolean, cancelConversion: () => void) {
+  if (!(status === 'converting' && progress)) return null
+  return (
+    <ProgressPanel
+      progress={progress}
+      cancelRequested={cancelRequested}
+      onCancel={cancelConversion}
+    />
+  )
+}
+
+function renderResultPanel(status: string, report: ConversionReport | undefined, downloadUrl: string | undefined, outputFilename: string, outputContent: string | undefined, outputBlob: Blob | undefined) {
+  if (!((status === 'completed' || status === 'cancelled') && report)) return null
+  return (
+    <ResultPanel
+      status={status as 'completed' | 'cancelled'}
+      report={report}
+      downloadUrl={downloadUrl}
+      outputFilename={outputFilename}
+      outputContent={outputContent}
+      outputBlob={outputBlob}
+    />
   )
 }
 
