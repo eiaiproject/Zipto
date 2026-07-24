@@ -65,7 +65,7 @@ export function UploadDropzone({
       <div className="dropzone-text">
         <p className="dropzone-title">Drop a ZIP archive here</p>
         <p className="dropzone-copy">
-          TXT, MD, HTML, CSV, JSON, XML, YAML, and LOG files will be converted.
+          Text, Markdown, HTML, CSV, JSON, code files, and more.
         </p>
       </div>
       <button

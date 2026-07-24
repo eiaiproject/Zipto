@@ -34,6 +34,7 @@ function App() {
   const [downloadUrl, setDownloadUrl] = useState<string>()
   const [outputFilename, setOutputFilename] = useState('markdown-output.md')
   const [outputContent, setOutputContent] = useState<string>()
+  const [outputBlob, setOutputBlob] = useState<Blob>()
   const [cancelRequested, setCancelRequested] = useState(false)
   const workerRef = useRef<Worker | undefined>(undefined)
   const downloadUrlRef = useRef<string | undefined>(undefined)
@@ -161,7 +162,7 @@ function App() {
 
   function handleWorkerResult(
     nextStatus: Extract<ConversionStatus, 'completed' | 'cancelled'>,
-    outputBlob: Blob | undefined,
+    blob: Blob | undefined,
     nextReport: ConversionReport | undefined,
   ) {
     setStatus(nextStatus)
@@ -172,14 +173,15 @@ function App() {
       setProgress(reportToProgress(nextReport, nextStatus))
     }
 
-    if (outputBlob && sourceFile) {
-      const url = URL.createObjectURL(outputBlob)
+    if (blob && sourceFile) {
+      const url = URL.createObjectURL(blob)
       downloadUrlRef.current = url
       setDownloadUrl(url)
       setOutputFilename(createOutputFilename(sourceFile.name))
+      setOutputBlob(blob)
 
       if (nextStatus === 'completed' && nextReport?.convertedFiles) {
-        extractPreviewFromZip(outputBlob).then(setOutputContent).catch(() => {
+        extractPreviewFromZip(blob).then(setOutputContent).catch(() => {
           // Preview is optional; ignore failures
         })
       }
@@ -217,7 +219,7 @@ function App() {
           <img src="/pwa-icon.svg" alt="" width="40" height="40" />
           <div className="brand-text">
             <span className="brand-name">Zipto</span>
-            <span className="brand-tag">ZIP → Markdown, in your browser</span>
+            <span className="brand-tag">ZIP → Other Formats, in your browser</span>
           </div>
         </div>
         <p className={`status-pill status-${status}`} aria-live="polite">{getStatusLabel(status)}</p>
@@ -226,7 +228,7 @@ function App() {
       <section className="intro">
         <p>
           Drop a ZIP below. Each supported file inside is converted to a section
-          in one Markdown file, with the original path kept as the heading.
+          in one Markdown & PDF file, with the original path kept as the heading.
         </p>
         <p className="notice notice-warning">
           Everything runs locally. No upload, no server.
@@ -247,34 +249,48 @@ function App() {
 
         <ErrorPanel message={error?.message} details={error?.details} />
 
-        {sourceFile && status === 'ready' ? (
-          <ZipSummary
-            file={sourceFile}
-            entries={entries}
-            unsafePaths={unsafePaths}
-            onConvert={startConversion}
-          />
-        ) : null}
-
-        {status === 'converting' && progress ? (
-          <ProgressPanel
-            progress={progress}
-            cancelRequested={cancelRequested}
-            onCancel={cancelConversion}
-          />
-        ) : null}
-
-        {(status === 'completed' || status === 'cancelled') && report ? (
-          <ResultPanel
-            status={status}
-            report={report}
-            downloadUrl={downloadUrl}
-            outputFilename={outputFilename}
-            outputContent={outputContent}
-          />
-        ) : null}
+        {renderZipSummary(sourceFile, status, entries, unsafePaths, startConversion)}
+        {renderProgressPanel(status, progress, cancelRequested, cancelConversion)}
+        {renderResultPanel(status, report, downloadUrl, outputFilename, outputContent, outputBlob)}
       </div>
     </main>
+  )
+}
+
+function renderZipSummary(sourceFile: File | undefined, status: string, entries: ZipEntry[], unsafePaths: UnsafePathResult[], startConversion: () => void) {
+  if (!(sourceFile && status === 'ready')) return null
+  return (
+    <ZipSummary
+      file={sourceFile}
+      entries={entries}
+      unsafePaths={unsafePaths}
+      onConvert={startConversion}
+    />
+  )
+}
+
+function renderProgressPanel(status: string, progress: ConversionProgress | undefined, cancelRequested: boolean, cancelConversion: () => void) {
+  if (!(status === 'converting' && progress)) return null
+  return (
+    <ProgressPanel
+      progress={progress}
+      cancelRequested={cancelRequested}
+      onCancel={cancelConversion}
+    />
+  )
+}
+
+function renderResultPanel(status: string, report: ConversionReport | undefined, downloadUrl: string | undefined, outputFilename: string, outputContent: string | undefined, outputBlob: Blob | undefined) {
+  if (!((status === 'completed' || status === 'cancelled') && report)) return null
+  return (
+    <ResultPanel
+      status={status as 'completed' | 'cancelled'}
+      report={report}
+      downloadUrl={downloadUrl}
+      outputFilename={outputFilename}
+      outputContent={outputContent}
+      outputBlob={outputBlob}
+    />
   )
 }
 
@@ -292,14 +308,16 @@ function createOutputFilename(sourceName: string): string {
 
 async function extractPreviewFromZip(blob: Blob): Promise<string | undefined> {
   try {
-    const previewSlice = blob.slice(0, 4096)
-    const text = await previewSlice.text()
-    const preview = text.slice(0, 500)
-    return blob.size > 4096 ? preview + '\n\n...' : preview
+    const head = await blob.slice(0, 24576).text()
+    const sep = '\n\n---\n\n'
+    const sepIdx = head.indexOf(sep)
+    const raw = sepIdx !== -1 ? head.slice(sepIdx + sep.length) : head
+    const preview = raw.slice(0, 500)
+    const hasMoreContent = blob.size > (sepIdx !== -1 ? sepIdx + sep.length + 500 : 500)
+    return hasMoreContent ? preview + '\n\n...' : preview
   } catch {
-    // silently fail
+    return undefined
   }
-  return undefined
 }
 
 function reportToProgress(

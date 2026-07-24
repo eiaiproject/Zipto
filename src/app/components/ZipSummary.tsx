@@ -1,3 +1,4 @@
+import { isSupportedExtension } from '../../converters'
 import type { UnsafePathResult, ZipEntry } from '../../types/conversion'
 
 type ZipSummaryProps = {
@@ -14,6 +15,7 @@ export function ZipSummary({
   onConvert,
 }: ZipSummaryProps) {
   const files = entries.filter((entry) => !entry.isDirectory)
+  const convertible = files.filter((f) => isSupportedExtension(f.extension)).length
   const previewEntries = entries.slice(0, 80)
   const remainingEntries = entries.length - previewEntries.length
 
@@ -22,7 +24,7 @@ export function ZipSummary({
       <div className="zip-summary-head">
         <div>
           <h2 className="zip-summary-filename">{file.name}</h2>
-          <p className="zip-summary-meta">Ready to convert</p>
+          <p className="zip-summary-meta">{convertible} of {files.length} files can be converted</p>
         </div>
         <button
           type="button"
@@ -30,7 +32,7 @@ export function ZipSummary({
           disabled={files.length === 0}
           onClick={onConvert}
         >
-          Convert to Markdown
+          Convert Now
         </button>
       </div>
 

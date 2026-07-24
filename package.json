@@ -1,7 +1,7 @@
 {
   "name": "zipto",
   "private": true,
-  "version": "0.3.2",
+  "version": "0.5.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "fflate": "^0.8.3",
+    "jspdf": "^4.2.1",
     "linkedom": "^0.18.12",
     "papaparse": "^5.5.4",
     "react": "^19.2.7",
