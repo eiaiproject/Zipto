@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbf7f0"/>
+      <stop offset="100%" stop-color="#f5efe4"/>
+    </linearGradient>
+    <linearGradient id="accent-bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b85630"/>
+      <stop offset="100%" stop-color="#8e4426"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Subtle top accent bar -->
+  <rect width="1200" height="6" fill="url(#accent-bar)"/>
+
+  <!-- Decorative circle cluster (bottom-right) -->
+  <circle cx="1050" cy="500" r="200" fill="#e8ddd0" opacity="0.35"/>
+  <circle cx="1100" cy="450" r="120" fill="#ddd0c0" opacity="0.25"/>
+  <circle cx="960" cy="560" r="80" fill="#e8ddd0" opacity="0.2"/>
+
+  <!-- ZIP icon (stylized box with zipper) -->
+  <g transform="translate(140, 315)">
+    <!-- Box -->
+    <rect x="-60" y="-75" width="120" height="150" rx="12" fill="#a64b2a" opacity="0.12"/>
+    <rect x="-52" y="-67" width="104" height="134" rx="8" fill="none" stroke="#a64b2a" stroke-width="3"/>
+    <!-- Zipper line -->
+    <line x1="-22" y1="-55" x2="-22" y2="55" stroke="#a64b2a" stroke-width="2.5" stroke-dasharray="4,3"/>
+    <line x1="22" y1="-55" x2="22" y2="55" stroke="#a64b2a" stroke-width="2.5" stroke-dasharray="4,3"/>
+    <!-- Zipper pull -->
+    <rect x="-10" y="-8" width="20" height="16" rx="3" fill="#a64b2a"/>
+    <circle cx="0" cy="0" r="4" fill="#fbf7f0"/>
+    <!-- Arrow right -->
+    <path d="M40 0 L90 0 M80 -12 L90 0 L80 12" fill="none" stroke="#a64b2a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- MD pill -->
+    <rect x="100" y="-14" width="60" height="28" rx="14" fill="#a64b2a"/>
+    <text x="130" y="5" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">MD</text>
+  </g>
+
+  <!-- Brand name -->
+  <text x="360" y="275" font-family="system-ui, sans-serif" font-size="72" font-weight="800" fill="#2a1f18" letter-spacing="-1.5">Zipto</text>
+
+  <!-- Tagline -->
+  <text x="360" y="335" font-family="system-ui, sans-serif" font-size="30" font-weight="500" fill="#6b5544">ZIP → Markdown, in your browser</text>
+
+  <!-- Feature badges -->
+  <g transform="translate(360, 390)">
+    <rect x="0" y="-14" width="130" height="28" rx="14" fill="#a64b2a" opacity="0.1"/>
+    <text x="65" y="5" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#8e4426" text-anchor="middle">⚡ 100% local</text>
+    <rect x="145" y="-14" width="130" height="28" rx="14" fill="#a64b2a" opacity="0.1"/>
+    <text x="210" y="5" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#8e4426" text-anchor="middle">🔒 No upload</text>
+    <rect x="290" y="-14" width="120" height="28" rx="14" fill="#a64b2a" opacity="0.1"/>
+    <text x="350" y="5" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#8e4426" text-anchor="middle">📄 Markdown</text>
+  </g>
+
+  <!-- URL -->
+  <text x="360" y="470" font-family="system-ui, sans-serif" font-size="18" fill="#9a8476">zipto.local</text>
+</svg>
