@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type UploadDropzoneProps = {
   readonly disabled?: boolean
@@ -12,6 +12,19 @@ export function UploadDropzone({
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const dragCounter = useRef(0)
+
+  useEffect(() => {
+    function resetDrag() {
+      dragCounter.current = 0
+      setIsDragging(false)
+    }
+    window.addEventListener('dragend', resetDrag)
+    window.addEventListener('drop', resetDrag)
+    return () => {
+      window.removeEventListener('dragend', resetDrag)
+      window.removeEventListener('drop', resetDrag)
+    }
+  }, [])
 
   function handleFiles(files: FileList | null) {
     const file = files?.[0]

@@ -1,4 +1,4 @@
-/* Hallmark · app shell · genre: tool · tone: earthy */
+/* Zipto app shell. Direction: DESIGN.md. Pill radius is reserved for live status and progress. */
 
 .app-shell {
   width: min(1120px, calc(100% - 32px));
@@ -45,6 +45,7 @@
 }
 
 .status-pill {
+  /* Pill marks live conversion state at a glance (aria-live polite). */
   flex-shrink: 0;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -73,7 +74,7 @@
   color: var(--danger);
 }
 
-/* Section heads — three intentionally different shapes (not the same template thrice) */
+/* Panel heads use three different shapes so summary, progress, and result scan differently. */
 
 .intro {
   display: grid;
@@ -97,13 +98,14 @@
 .panel,
 .dropzone,
 .notice {
+  /* Panels lift above linen; controls stay flat so elevation means surface. */
   border: 1px solid var(--border);
   border-radius: var(--radius-2);
   background: var(--surface);
   box-shadow: var(--shadow-2);
 }
 
-/* Dropzone — solid 1px border, no dashed; drag state emphasises border, no transform */
+/* Dropzone: solid 1px border (no dashed); drag state deepens border color, no transform. */
 .dropzone {
   min-height: 180px;
   display: flex;
@@ -143,9 +145,9 @@
   font-size: 0.92rem;
 }
 
-/* Buttons — token-driven hover, no filter, focus ring tightened */
+/* Buttons: token-driven hover, no filter, focus ring tightened; 44px meets the minimum tap target */
 .button {
-  min-height: 42px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -226,7 +228,7 @@
   color: var(--warning);
 }
 
-/* Section labels — used once (brand tag) and removed from panel heads */
+/* Section labels stay on the brand tag only, never on panel heads. */
 .eyebrow {
   color: var(--accent-strong);
   font-size: 0.78rem;
@@ -235,7 +237,7 @@
   text-transform: uppercase;
 }
 
-/* === Panel 1: ZIP Summary — filename as head, Convert as bottom action === */
+/* Panel 1 ZIP Summary: filename as head, Convert as bottom action. */
 .zip-summary {
   display: grid;
   gap: 18px;
@@ -272,7 +274,7 @@
   justify-self: end;
 }
 
-/* === Panel 2: Progress — live state as head, Cancel tucked to corner === */
+/* Panel 2 Progress: live state as head, Cancel tucked to corner. */
 .progress-panel {
   display: grid;
   gap: 18px;
@@ -345,7 +347,7 @@
   overflow-wrap: anywhere;
 }
 
-/* === Panel 3: Result — confirmation tick + download as the dominant anchor === */
+/* Panel 3 Result: tick plus download as the dominant anchor. */
 .result-panel {
   display: grid;
   gap: 18px;
@@ -390,7 +392,7 @@
   margin-left: auto;
 }
 
-/* Stats grid — single shape, two column counts */
+/* Stats grid: single cell shape; tabular numerals are the motif. */
 .summary-grid {
   display: grid;
   gap: 1px;
@@ -421,7 +423,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Progress uses a 3-col subset (total / processed / elapsed) — converted/skipped/failed
+/* Progress uses a 3-col subset (total, processed, elapsed); converted, skipped, failed
    move to the report after the run finishes, not in the live view */
 .progress-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -587,7 +589,7 @@
   }
 }
 
-/* Update banner — uses tokens, sits on its own z-layer */
+/* Update banner uses tokens on its own z-layer. */
 .update-banner {
   position: fixed;
   bottom: 24px;

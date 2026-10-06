@@ -15,7 +15,9 @@ export function ZipSummary({
   onConvert,
 }: ZipSummaryProps) {
   const files = entries.filter((entry) => !entry.isDirectory)
-  const convertible = files.filter((f) => isSupportedExtension(f.extension)).length
+  const convertible = files.filter(
+    (f) => !f.isUnsafe && isSupportedExtension(f.extension),
+  ).length
   const previewEntries = entries.slice(0, 80)
   const remainingEntries = entries.length - previewEntries.length
 
@@ -60,10 +62,10 @@ export function ZipSummary({
       </p>
 
       <ul className="file-list" aria-label="ZIP file list">
-        {previewEntries.map((entry) => (
+        {previewEntries.map((entry, index) => (
           <li
             className={`file-row ${entry.isUnsafe ? 'is-unsafe' : ''}`}
-            key={`${entry.path}-${entry.compressedSize ?? 0}`}
+            key={`${index}-${entry.path}-${entry.compressedSize ?? 0}`}
           >
             <span>{entry.isDirectory ? 'Folder' : entry.extension || 'File'}</span>
             <code>{entry.path}</code>

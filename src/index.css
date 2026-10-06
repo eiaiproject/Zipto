@@ -1,44 +1,42 @@
-/* Hallmark · app shell · genre: tool · tone: earthy
- * contrast: pass (40–41) · mobile: pass (34, 49, 50–57)
- */
+/* Zipto tokens. Direction: DESIGN.md. Dial ENERGY 1 / RHYTHM 2 / MOTION 1. */
 :root {
-  /* Earthy paper — warm beige tinted toward terracotta (no zero-chroma neutrals) */
+  /* Paper base: linen keeps long file lists readable without glare. */
   --bg: oklch(95% 0.012 65);            /* warm linen */
   --surface: oklch(98% 0.008 70);       /* cream */
   --surface-strong: oklch(99% 0.006 70); /* ivory */
 
-  /* Ink — deep clay, not pure black */
+  /* Ink: clay pair passes AA on linen (text 12.70, muted 5.65). */
   --text: oklch(28% 0.018 50);          /* dark sienna-brown */
   --muted: oklch(48% 0.022 55);         /* mid clay */
 
-  /* Borders — hairline, warm-tinted */
+  /* Hairline borders: one warm rule is the repeating motif. */
   --border: oklch(86% 0.018 70);
 
-  /* Terracotta accent — the earthy anchor */
+  /* Single accent: terracotta marks only the key action and live status. */
   --accent: oklch(54% 0.135 38);        /* terracotta */
   --accent-strong: oklch(40% 0.115 35); /* deep clay */
   --accent-soft: oklch(92% 0.038 50);   /* sand wash */
-  --accent-ink: oklch(98% 0.008 70);    /* ivory — readable on accent fills */
+  --accent-ink: oklch(98% 0.008 70);    /* ivory, 5.09 on accent */
 
-  /* Status tones — kept in the same warm family */
+  /* Status tones stay warm so alerts never open a second palette. */
   --danger: oklch(48% 0.135 25);        /* brick */
   --danger-soft: oklch(92% 0.038 25);
   --warning: oklch(55% 0.105 70);       /* ochre */
   --warning-soft: oklch(93% 0.045 80);
 
-  /* Two-tier shadow + elevation tokens */
+  /* Elevation: hairline lift for rows, panel shadow for surfaces only. */
   --shadow-1: 0 1px 0 oklch(28% 0.018 50 / 0.06);  /* hairline lift */
   --shadow-2: 0 8px 20px oklch(28% 0.018 50 / 0.08); /* panel */
   --shadow-icon: 0 1px 2px oklch(28% 0.018 50 / 0.08);
 
-  /* Type pair — Fraunces (display serif) + Inter (body) */
+  /* Type: Sora calms tool copy; mono marks machine text (paths, output). */
   --font-display: Sora, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
   --font-sans: Sora, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  --font-mono: ui-monospace, 'SF Mono', Consolas, monospace;
 
-  /* Radii — two-tier */
+  /* Radii: 6px controls, 12px panels, 999px only for status and progress pills. */
   --radius-1: 6px;
   --radius-2: 12px;
 

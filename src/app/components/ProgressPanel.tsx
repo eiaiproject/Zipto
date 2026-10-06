@@ -20,12 +20,12 @@ export function ProgressPanel({
     <section className="panel progress-panel" aria-label="Conversion progress">
       <div className="progress-head">
         <p className="progress-headline">
-          {cancelRequested ? 'Cancelling…' : `Converting — ${percent}%`}
+          {cancelRequested ? 'Cancelling…' : `Converting: ${percent}%`}
         </p>
         <p className="progress-sub">
           {progress.processedFiles} of {progress.totalFiles} files · {formatElapsed(progress.elapsedMs)} elapsed
         </p>
-        <span className="sr-only" aria-live="polite">{percent}% processed — {progress.processedFiles} of {progress.totalFiles} files</span>
+        <span className="sr-only" aria-live="polite">{percent}% processed, {progress.processedFiles} of {progress.totalFiles} files</span>
       </div>
 
       <progress className="progress-track" value={percent} max={100} aria-label={`${percent}% processed`} />
