@@ -45,32 +45,59 @@ const INLINE_MARKERS: MarkerDef[] = [
   { open: '_', close: '_', styles: { italic: true } },
 ]
 
+type InlineCandidate = {
+  openIdx: number
+  closeIdx: number
+  content: string
+  styles: TextStyle
+  open: string
+  close: string
+}
+
+function matchMarker(remaining: string, def: MarkerDef): InlineCandidate | null {
+  const openIdx = remaining.indexOf(def.open)
+  if (openIdx === -1) return null
+  const contentStart = openIdx + def.open.length
+  const closeIdx = remaining.indexOf(def.close, contentStart)
+  if (closeIdx === -1) return null
+  const content = remaining.slice(contentStart, closeIdx)
+  if (content.length === 0) return null
+  if (isIntraWordMark(remaining, def.open, openIdx, closeIdx, def.close, content)) return null
+  return { openIdx, closeIdx, content, styles: def.styles, open: def.open, close: def.close }
+}
+
+function isIntraWordMark(
+  remaining: string,
+  open: string,
+  openIdx: number,
+  closeIdx: number,
+  close: string,
+  content: string,
+): boolean {
+  // Avoid treating snake_case / intra-word underscores as emphasis: a_b_c should stay plain
+  if ((open !== '_' && open !== '*') || open.length !== 1) return false
+  const before = openIdx > 0 ? remaining[openIdx - 1] : ''
+  const after = closeIdx + close.length < remaining.length ? remaining[closeIdx + close.length] : ''
+  if (before && after && isWordChar(before) && isWordChar(after)) return true
+  // Single-char emphasis with no spaces (e.g. a_b) is likely an identifier, not emphasis
+  return !content.includes(' ') && before !== '' && isWordChar(before)
+}
+
+function isWordChar(ch: string): boolean {
+  return /[A-Za-z0-9]/.test(ch)
+}
+
+function isEarlierMatch(best: InlineCandidate | null, candidate: InlineCandidate): boolean {
+  if (best === null) return true
+  if (candidate.openIdx !== best.openIdx) return candidate.openIdx < best.openIdx
+  return candidate.open.length > best.open.length
+}
+
 function findInlineMatch(remaining: string): { prefix: string; content: string; styles: TextStyle; rest: string } | null {
-  let best: { openIdx: number; closeIdx: number; content: string; styles: TextStyle; open: string; close: string } | null = null
-  for (const { open, close, styles } of INLINE_MARKERS) {
-    const openIdx = remaining.indexOf(open)
-    if (openIdx === -1) continue
-    const contentStart = openIdx + open.length
-    const closeIdx = remaining.indexOf(close, contentStart)
-    if (closeIdx === -1) continue
-    const content = remaining.slice(contentStart, closeIdx)
-    if (content.length === 0) continue
-    // Avoid treating snake_case / intra-word underscores as emphasis: a_b_c should stay plain
-    if ((open === '_' || open === '*') && open.length === 1) {
-      const before = openIdx > 0 ? remaining[openIdx - 1] : ''
-      const after = closeIdx + close.length < remaining.length ? remaining[closeIdx + close.length] : ''
-      const isWordChar = (ch: string) => /[A-Za-z0-9]/.test(ch)
-      if (before && after && isWordChar(before) && isWordChar(after)) continue
-      // Single-char emphasis with no spaces (e.g. a_b) is likely an identifier, not emphasis
-      if (!content.includes(' ') && before && isWordChar(before)) continue
-    }
-    if (
-      best === null ||
-      openIdx < best.openIdx ||
-      (openIdx === best.openIdx && open.length > best.open.length)
-    ) {
-      best = { openIdx, closeIdx, content, styles, open, close }
-    }
+  let best: InlineCandidate | null = null
+  for (const def of INLINE_MARKERS) {
+    const candidate = matchMarker(remaining, def)
+    if (candidate && isEarlierMatch(best, candidate)) best = candidate
   }
   if (!best) return null
   return {
@@ -140,6 +167,8 @@ function tryTableBlock(lines: string[], i: number): { block: Block | null; nextI
   return { block: { type: 'table', rows }, nextI: j }
 }
 
+const BACKSLASH = String.fromCharCode(92)
+
 function splitTableRow(line: string): string[] {
   const cells: string[] = []
   let current = ''
@@ -148,7 +177,7 @@ function splitTableRow(line: string): string[] {
   const inner = line.slice(1, -1)
   for (const ch of inner) {
     if (escaped) {
-      current += ch === '|' ? '|' : `\\${ch}`
+      current += ch === '|' ? '|' : String.raw`\\${ch}`
       escaped = false
       continue
     }
@@ -163,9 +192,9 @@ function splitTableRow(line: string): string[] {
     }
     current += ch
   }
-  if (escaped) current += '\\'
+  if (escaped) current += BACKSLASH
   cells.push(current.trim())
-  return cells.map((c) => c.replaceAll('\\|', '|'))
+  return cells.map((c) => c.replaceAll(String.raw`\|`, '|'))
 }
 
 function tryBlockquoteBlock(lines: string[], i: number): { block: Block | null; nextI: number } {

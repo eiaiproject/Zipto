@@ -396,17 +396,22 @@ async function pushChunks(unzip: Unzip, data: Uint8Array): Promise<void> {
     return
   }
 
-  for (let offset = 0; offset < data.length; offset += streamChunkBytes) {
-    if (cancelRequested) {
-      activeTerminators.forEach((terminate) => terminate())
-      activeTerminators = new Set()
-      return
-    }
+  await pushChunkAt(unzip, data, 0)
+}
 
-    const end = Math.min(offset + streamChunkBytes, data.length)
-    unzip.push(data.subarray(offset, end), end === data.length)
-    await yieldToWorker()
+async function pushChunkAt(unzip: Unzip, data: Uint8Array, offset: number): Promise<void> {
+  if (cancelRequested) {
+    activeTerminators.forEach((terminate) => terminate())
+    activeTerminators = new Set()
+    return
   }
+
+  const end = Math.min(offset + streamChunkBytes, data.length)
+  const isLast = end === data.length
+  unzip.push(data.subarray(offset, end), isLast)
+  if (isLast) return
+  await yieldToWorker()
+  return pushChunkAt(unzip, data, end)
 }
 
 function concatChunks(chunks: Uint8Array[], byteLength: number): Uint8Array {

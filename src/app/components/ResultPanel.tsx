@@ -110,17 +110,17 @@ export function ResultPanel({
       </dl>
 
       {report.skippedFiles > 0 ? (
-        <div className="notice notice-warning" role="status">
+        <output className="notice notice-warning">
           <strong>{report.skippedFiles} file{report.skippedFiles !== 1 ? 's' : ''} skipped.</strong>
           {' '}See the conversion report at the top of the downloaded <code>.md</code>.
-        </div>
+        </output>
       ) : null}
 
       {showPdfWarning ? (
-        <div className="notice notice-warning" role="status">
+        <output className="notice notice-warning">
           Output is large ({formatBytes(outputBlob?.size ?? 0)}). PDF generation runs in the
           background and may take a while.
-        </div>
+        </output>
       ) : null}
 
       {pdfError ? (
@@ -133,7 +133,7 @@ export function ResultPanel({
       {outputContent ? (
         <div className="output-preview">
           <h3>Output preview</h3>
-          <pre className="preview-content" tabIndex={0}><code>{outputContent}</code></pre>
+          <pre className="preview-content"><code>{outputContent}</code></pre>
         </div>
       ) : null}
 
