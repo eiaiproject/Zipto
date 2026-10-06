@@ -27,7 +27,7 @@ interface TextStyle {
 
 type InlineSeg = { text: string; styles: TextStyle }
 
-// ── Inline parsing --------------------------------------------------------
+// Inline parsing: markers ordered by position, underscores guarded.
 
 interface MarkerDef {
   open: string
@@ -46,6 +46,7 @@ const INLINE_MARKERS: MarkerDef[] = [
 ]
 
 function findInlineMatch(remaining: string): { prefix: string; content: string; styles: TextStyle; rest: string } | null {
+  let best: { openIdx: number; closeIdx: number; content: string; styles: TextStyle; open: string; close: string } | null = null
   for (const { open, close, styles } of INLINE_MARKERS) {
     const openIdx = remaining.indexOf(open)
     if (openIdx === -1) continue
@@ -54,14 +55,30 @@ function findInlineMatch(remaining: string): { prefix: string; content: string; 
     if (closeIdx === -1) continue
     const content = remaining.slice(contentStart, closeIdx)
     if (content.length === 0) continue
-    return {
-      prefix: remaining.slice(0, openIdx),
-      content,
-      styles,
-      rest: remaining.slice(closeIdx + close.length),
+    // Avoid treating snake_case / intra-word underscores as emphasis: a_b_c should stay plain
+    if ((open === '_' || open === '*') && open.length === 1) {
+      const before = openIdx > 0 ? remaining[openIdx - 1] : ''
+      const after = closeIdx + close.length < remaining.length ? remaining[closeIdx + close.length] : ''
+      const isWordChar = (ch: string) => /[A-Za-z0-9]/.test(ch)
+      if (before && after && isWordChar(before) && isWordChar(after)) continue
+      // Single-char emphasis with no spaces (e.g. a_b) is likely an identifier, not emphasis
+      if (!content.includes(' ') && before && isWordChar(before)) continue
+    }
+    if (
+      best === null ||
+      openIdx < best.openIdx ||
+      (openIdx === best.openIdx && open.length > best.open.length)
+    ) {
+      best = { openIdx, closeIdx, content, styles, open, close }
     }
   }
-  return null
+  if (!best) return null
+  return {
+    prefix: remaining.slice(0, best.openIdx),
+    content: best.content,
+    styles: best.styles,
+    rest: remaining.slice(best.closeIdx + best.close.length),
+  }
 }
 
 function parseInline(text: string): InlineSeg[] {
@@ -83,9 +100,10 @@ function parseInline(text: string): InlineSeg[] {
   return segments
 }
 
-// ── Block parsing helpers -------------------------------------------------
+// Block parsing helpers: code, table, quote, heading, list.
 
-const TABLE_LINE_RE = /^\|[^|]+\|$/
+const TABLE_LINE_RE = /^\|.*\|$/
+const TABLE_SEPARATOR_RE = /^[\s|:-]+$/
 const BULLET_RE = /^[-*]\s+(.*)/
 const NUMBERED_RE = /^(\d+)\.\s+(.*)/
 
@@ -104,7 +122,8 @@ function tryCodeBlock(lines: string[], i: number): { block: Block | null; nextI:
 }
 
 function tryTableBlock(lines: string[], i: number): { block: Block | null; nextI: number } {
-  if (!TABLE_LINE_RE.exec(lines[i].trim())) return { block: null, nextI: i }
+  const first = lines[i].trim()
+  if (first.length < 3 || !TABLE_LINE_RE.exec(first)) return { block: null, nextI: i }
 
   const tableLines: string[] = []
   let j = i
@@ -112,12 +131,41 @@ function tryTableBlock(lines: string[], i: number): { block: Block | null; nextI
     tableLines.push(lines[j].trim())
     j++
   }
-  const dataLines = tableLines.filter(l => !/^[\s|:-]+$/.exec(l))
-  const rows = dataLines.map(l =>
-    l.split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1),
-  )
+  const dataLines = tableLines.filter((l) => !TABLE_SEPARATOR_RE.exec(l))
+  const rows = dataLines.map((l) => splitTableRow(l))
   if (rows.length === 0 || rows[0].length === 0) return { block: null, nextI: i }
+  if (rows.every((row) => row.every((cell) => cell.length === 0))) {
+    return { block: null, nextI: i }
+  }
   return { block: { type: 'table', rows }, nextI: j }
+}
+
+function splitTableRow(line: string): string[] {
+  const cells: string[] = []
+  let current = ''
+  let escaped = false
+  // Strip outer pipes: "| a | b |" -> " a | b "
+  const inner = line.slice(1, -1)
+  for (const ch of inner) {
+    if (escaped) {
+      current += ch === '|' ? '|' : `\\${ch}`
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      escaped = true
+      continue
+    }
+    if (ch === '|') {
+      cells.push(current.trim())
+      current = ''
+      continue
+    }
+    current += ch
+  }
+  if (escaped) current += '\\'
+  cells.push(current.trim())
+  return cells.map((c) => c.replaceAll('\\|', '|'))
 }
 
 function tryBlockquoteBlock(lines: string[], i: number): { block: Block | null; nextI: number } {
@@ -133,9 +181,10 @@ function tryBlockquoteBlock(lines: string[], i: number): { block: Block | null; 
 }
 
 function tryHeadingBlock(trimmed: string): Block | null {
-  if (trimmed.startsWith('# ')) return { type: 'h1', text: trimmed.slice(2) }
-  if (trimmed.startsWith('## ')) return { type: 'h2', text: trimmed.slice(3) }
+  if (trimmed.startsWith('#### ')) return { type: 'h3', text: trimmed.slice(5).trim() }
   if (trimmed.startsWith('### ')) return { type: 'h3', text: trimmed.slice(4) }
+  if (trimmed.startsWith('## ')) return { type: 'h2', text: trimmed.slice(3) }
+  if (trimmed.startsWith('# ')) return { type: 'h1', text: trimmed.slice(2) }
   return null
 }
 
@@ -160,7 +209,7 @@ function tryHrBlock(trimmed: string): Block | null {
   return null
 }
 
-// ── Block parsing ---------------------------------------------------------
+// Block parsing: first matching block wins per line.
 
 function parseBlocks(md: string): Block[] {
   const blocks: Block[] = []
@@ -198,7 +247,7 @@ function parseBlocks(md: string): Block[] {
   return blocks
 }
 
-// ── PDF rendering helpers -------------------------------------------------
+// PDF helpers: style, measure, and write wrapped inline text.
 
 function applyStyle(doc: jsPDF, styles: TextStyle): void {
   if (styles.code) {
@@ -291,13 +340,7 @@ function writeInlineText(
   return { lines: lineCount, height: lineCount * LINE_H }
 }
 
-function estimateLines(doc: jsPDF, text: string, maxWidth: number): number {
-  doc.setFont(FONT, 'normal')
-  doc.setFontSize(9)
-  return (doc.splitTextToSize(text, maxWidth) as string[]).length
-}
-
-// ── Table drawing ---------------------------------------------------------
+// Table drawing: header band plus zebra rows across pages.
 
 function computeRowHeights(
   doc: jsPDF,
@@ -422,7 +465,7 @@ function drawTable(doc: jsPDF, rows: string[][], x: number, y: number, tableMaxW
   return currentY - y + 2
 }
 
-// ── Block renderers -------------------------------------------------------
+// Block renderers: one function per block type.
 
 function renderHeading(
   doc: jsPDF, text: string, checkSpace: (n: number) => void,
@@ -444,9 +487,8 @@ function renderBlockquote(
   yRef: { value: number },
 ): void {
   const segments = parseInline(text)
-  const fullText = segments.map(s => s.text).join('')
-  const estimatedLines = estimateLines(doc, fullText, BODY_W - 12)
-  const contentH = Math.max(estimatedLines * LINE_H, LINE_H)
+  const measuredH = measureInlineHeight(doc, segments, BODY_W - 12)
+  const contentH = Math.max(measuredH, LINE_H)
   const blockH = contentH + 10
 
   checkSpace(blockH)
@@ -459,7 +501,35 @@ function renderBlockquote(
   doc.rect(MARGIN + 2, yRef.value + 1, BODY_W - 4, contentH, 'F')
 
   const { height: actualHeight } = writeInlineText(doc, segments, MARGIN + 6, yRef.value + 4, BODY_W - 12)
-  yRef.value += Math.max(blockH, actualHeight)
+  yRef.value += Math.max(blockH, actualHeight + 6)
+}
+
+function measureInlineHeight(doc: jsPDF, segments: InlineSeg[], maxWidth: number): number {
+  if (segments.length === 0) return 0
+  if (segments.length === 1 && !segments[0].styles.bold && !segments[0].styles.italic && !segments[0].styles.code) {
+    doc.setFont(FONT, 'normal')
+    doc.setFontSize(9)
+    const splitLines = doc.splitTextToSize(segments[0].text, maxWidth) as string[]
+    return splitLines.length * LINE_H
+  }
+  let lines = 1
+  let currentW = 0
+  for (const seg of segments) {
+    for (const part of splitWords(seg.text)) {
+      applyStyle(doc, seg.styles)
+      const tw = doc.getTextWidth(part)
+      const isWhitespace = part.trim().length === 0
+      if (currentW > 0 && currentW + tw > maxWidth) {
+        lines += 1
+        currentW = 0
+        if (isWhitespace) continue
+      }
+      currentW += tw
+    }
+  }
+  doc.setFont(FONT, 'normal')
+  doc.setFontSize(9)
+  return lines * LINE_H
 }
 
 function renderListBlock(
@@ -531,7 +601,7 @@ function renderBody(
   yRef.value += height + 1
 }
 
-// ── Main export -----------------------------------------------------------
+// Main export: parse blocks, render pages, number footers.
 
 export function markdownToPdfBlob(markdown: string): Blob {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
@@ -563,7 +633,7 @@ export function markdownToPdfBlob(markdown: string): Blob {
     doc.setFont(FONT, 'normal')
     doc.setFontSize(7)
     doc.setTextColor(150, 140, 130)
-    doc.text(`— ${i} —`, PAGE_W / 2, PAGE_H - 10, { align: 'center' })
+    doc.text(`- ${i} -`, PAGE_W / 2, PAGE_H - 10, { align: 'center' })
   }
 
   return doc.output('blob')

@@ -5,9 +5,10 @@ export type CsvConversion = {
   warnings: string[]
 }
 
-export function csvToMarkdown(content: string): CsvConversion {
+export function csvToMarkdown(content: string, delimiter?: string): CsvConversion {
   const parsed = Papa.parse<string[]>(content, {
     skipEmptyLines: true,
+    delimiter: delimiter ?? '',
   })
   const rows = parsed.data.filter((row) => Array.isArray(row))
   const width = Math.max(1, ...rows.map((row) => row.length))

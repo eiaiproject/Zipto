@@ -1,6 +1,5 @@
 import { codeBlockToMarkdown } from './codeBlockToMarkdown'
 import { csvToMarkdown } from './csvToMarkdown'
-// import { htmlToMarkdown } from './htmlToMarkdown'
 import { jsonToMarkdown } from './jsonToMarkdown'
 import { txtToMarkdown } from './txtToMarkdown'
 
@@ -76,7 +75,7 @@ const SUPPORTED_EXTENSIONS = new Set([
   'nim', 'nims',
   'zig',
   'sol',
-  'r', 'R',
+  'r',
 
   // Extensionless text files (Makefile, Dockerfile, Gemfile, …)
   '',
@@ -90,24 +89,35 @@ export function convertToMarkdown(
   extension: string,
   content: string,
 ): MarkdownConversion {
-  switch (extension.toLowerCase()) {
+  if (!content) {
+    return { markdown: '', warnings: [] }
+  }
+  const ext = extension.toLowerCase()
+  switch (ext) {
     case 'csv':
       return csvToMarkdown(content)
+    case 'tsv':
+      return csvToMarkdown(content, '\t')
     case 'json':
+    case 'jsonc':
+    case 'json5':
       return jsonToMarkdown(content)
     case 'html':
     case 'htm':
+    case 'xhtml':
       return { markdown: codeBlockToMarkdown(content, 'html'), warnings: [] }
     case 'txt':
     case 'md':
     case 'markdown':
+    case 'mdx':
+    case 'rst':
       return { markdown: txtToMarkdown(content), warnings: [] }
     case 'xml':
     case 'yaml':
     case 'yml':
     case 'log':
-      return { markdown: codeBlockToMarkdown(content, extension), warnings: [] }
+      return { markdown: codeBlockToMarkdown(content, ext), warnings: [] }
     default:
-      return { markdown: codeBlockToMarkdown(content, extension || 'text'), warnings: [] }
+      return { markdown: codeBlockToMarkdown(content, ext || 'text'), warnings: [] }
   }
 }

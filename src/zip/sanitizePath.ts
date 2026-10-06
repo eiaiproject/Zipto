@@ -19,7 +19,6 @@ export function sanitizeZipPath(path: string): SanitizedPath {
 
   if (
     normalized.startsWith('/') ||
-    normalized.startsWith('//') ||
     /^[A-Za-z]:/.test(normalized)
   ) {
     return {
@@ -51,16 +50,7 @@ export function getFilename(path: string): string {
 export function getExtension(path: string): string {
   const name = getFilename(path)
   const dotIndex = name.lastIndexOf('.')
-  return dotIndex > -1 ? name.slice(dotIndex + 1).toLowerCase() : ''
-}
-
-export function replaceExtension(path: string, extension: string): string {
-  const dotIndex = path.lastIndexOf('.')
-  const slashIndex = path.lastIndexOf('/')
-
-  if (dotIndex > slashIndex) {
-    return `${path.slice(0, dotIndex)}${extension}`
-  }
-
-  return `${path}${extension}`
+  // Leading-dot files like .gitignore have no extension; treat as extensionless text
+  if (dotIndex <= 0) return ''
+  return name.slice(dotIndex + 1).toLowerCase()
 }
