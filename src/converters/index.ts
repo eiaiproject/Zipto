@@ -85,10 +85,10 @@ export function isSupportedExtension(extension: string): boolean {
   return SUPPORTED_EXTENSIONS.has(extension.toLowerCase())
 }
 
-export function convertToMarkdown(
+export async function convertToMarkdown(
   extension: string,
   content: string,
-): MarkdownConversion {
+): Promise<MarkdownConversion> {
   if (!content) {
     return { markdown: '', warnings: [] }
   }
