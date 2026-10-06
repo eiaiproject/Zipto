@@ -15,6 +15,10 @@
 # PWA assets — cache aggressively
 /pwa-icon.svg
   Cache-Control: public, max-age=31536000, immutable
+/pwa-icon-192.png
+  Cache-Control: public, max-age=31536000, immutable
+/pwa-icon-512.png
+  Cache-Control: public, max-age=31536000, immutable
 
 # Build assets — content-hashed, cache forever
 /assets/*
