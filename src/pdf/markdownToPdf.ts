@@ -167,7 +167,7 @@ function tryTableBlock(lines: string[], i: number): { block: Block | null; nextI
   return { block: { type: 'table', rows }, nextI: j }
 }
 
-const BACKSLASH = String.fromCharCode(92)
+const BACKSLASH = String.fromCodePoint(92)
 
 function splitTableRow(line: string): string[] {
   const cells: string[] = []
