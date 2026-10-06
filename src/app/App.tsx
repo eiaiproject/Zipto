@@ -38,6 +38,8 @@ function App() {
   const [cancelRequested, setCancelRequested] = useState(false)
   const workerRef = useRef<Worker | undefined>(undefined)
   const downloadUrlRef = useRef<string | undefined>(undefined)
+  const fileReadIdRef = useRef(0)
+  const conversionIdRef = useRef(0)
 
   useEffect(() => {
     return () => {
@@ -47,6 +49,7 @@ function App() {
   }, [])
 
   async function handleFileSelected(file: File) {
+    const readId = ++fileReadIdRef.current
     workerRef.current?.terminate()
     workerRef.current = undefined
     revokeDownloadUrl()
@@ -57,6 +60,9 @@ function App() {
     setProgress(undefined)
     setReport(undefined)
     setDownloadUrl(undefined)
+    setOutputContent(undefined)
+    setOutputBlob(undefined)
+    setOutputFilename('markdown-output.md')
     setCancelRequested(false)
 
     if (!isZipFile(file)) {
@@ -72,11 +78,23 @@ function App() {
     setSourceFile(file)
 
     try {
-      const result = await readZipEntries(file)
+      const [result, isZip] = await Promise.all([readZipEntries(file), hasZipMagicBytes(file)])
+      if (readId !== fileReadIdRef.current) return
+      if (!isZip) {
+        setStatus('failed')
+        setSourceFile(undefined)
+        setEntries([])
+        setError({
+          message: 'Select a ZIP file.',
+          details: 'The file signature does not match a ZIP archive (expected PK header).',
+        })
+        return
+      }
       setEntries(result.entries)
       setUnsafePaths(result.unsafePaths)
       setStatus('ready')
     } catch (readError) {
+      if (readId !== fileReadIdRef.current) return
       setStatus('failed')
       setSourceFile(undefined)
       setError({
@@ -94,11 +112,14 @@ function App() {
       return
     }
 
+    conversionIdRef.current += 1
     workerRef.current?.terminate()
     revokeDownloadUrl()
     setDownloadUrl(undefined)
     setReport(undefined)
     setError(undefined)
+    setOutputContent(undefined)
+    setOutputBlob(undefined)
     setCancelRequested(false)
     setStatus('converting')
     setProgress({
@@ -174,17 +195,25 @@ function App() {
     }
 
     if (blob && sourceFile) {
+      const conversionId = conversionIdRef.current
       const url = URL.createObjectURL(blob)
       downloadUrlRef.current = url
       setDownloadUrl(url)
       setOutputFilename(createOutputFilename(sourceFile.name))
       setOutputBlob(blob)
 
-      if (nextStatus === 'completed' && nextReport?.convertedFiles) {
-        extractPreviewFromZip(blob).then(setOutputContent).catch(() => {
+      extractPreviewFromMarkdown(blob)
+        .then((preview) => {
+          if (conversionId === conversionIdRef.current) {
+            setOutputContent(preview)
+          }
+        })
+        .catch(() => {
           // Preview is optional; ignore failures
         })
-      }
+    } else {
+      setOutputContent(undefined)
+      setOutputBlob(undefined)
     }
 
     cleanupWorker()
@@ -216,6 +245,7 @@ function App() {
     <main className="app-shell">
       <header className="app-header">
         <div className="brand">
+          {/* Zip glyph marks archive input; the single arrow states transfer direction. */}
           <img src="/pwa-icon.svg" alt="" width="40" height="40" />
           <div className="brand-text">
             <span className="brand-name">Zipto</span>
@@ -303,18 +333,39 @@ function isZipFile(file: File): boolean {
 }
 
 function createOutputFilename(sourceName: string): string {
-  return `${sourceName.replace(/\.zip$/i, '')}-markdown.md`
+  const base = sourceName.replace(/\.zip$/i, '')
+  const safeBase = base.trim() ? base : 'archive'
+  return `${safeBase}-markdown.md`
 }
 
-async function extractPreviewFromZip(blob: Blob): Promise<string | undefined> {
+async function hasZipMagicBytes(file: File): Promise<boolean> {
   try {
-    const head = await blob.slice(0, 24576).text()
+    const header = new Uint8Array(await file.slice(0, 4).arrayBuffer())
+    // ZIP local file header: PK\x03\x04, empty archive: PK\x05\x06, spanned: PK\x07\x08
+    return (
+      header.length >= 4 &&
+      header[0] === 0x50 &&
+      header[1] === 0x4b &&
+      (header[2] === 0x03 || header[2] === 0x05 || header[2] === 0x07) &&
+      (header[3] === 0x04 || header[3] === 0x06 || header[3] === 0x08)
+    )
+  } catch {
+    return false
+  }
+}
+
+async function extractPreviewFromMarkdown(blob: Blob): Promise<string | undefined> {
+  try {
+    const HEAD_BYTES = 24576
+    const head = await blob.slice(0, HEAD_BYTES).text()
     const sep = '\n\n---\n\n'
-    const sepIdx = head.indexOf(sep)
+    // Report itself contains a "---" separator, so use the LAST one (report vs content boundary)
+    const sepIdx = head.lastIndexOf(sep)
     const raw = sepIdx !== -1 ? head.slice(sepIdx + sep.length) : head
     const preview = raw.slice(0, 500)
-    const hasMoreContent = blob.size > (sepIdx !== -1 ? sepIdx + sep.length + 500 : 500)
-    return hasMoreContent ? preview + '\n\n...' : preview
+    const truncatedByHead = blob.size > head.length
+    const hasMoreContent = raw.length > 500 || truncatedByHead
+    return hasMoreContent ? `${preview}\n\n...` : preview
   } catch {
     return undefined
   }

@@ -1,13 +1,15 @@
-import Papa from 'papaparse'
-
 export type CsvConversion = {
   markdown: string
   warnings: string[]
 }
 
-export function csvToMarkdown(content: string): CsvConversion {
+export async function csvToMarkdown(content: string, delimiter?: string): Promise<CsvConversion> {
+  // Dynamic import keeps PapaParse out of the initial bundle; it loads only
+  // when a ZIP actually contains CSV/TSV files
+  const { default: Papa } = await import('papaparse')
   const parsed = Papa.parse<string[]>(content, {
     skipEmptyLines: true,
+    delimiter: delimiter ?? '',
   })
   const rows = parsed.data.filter((row) => Array.isArray(row))
   const width = Math.max(1, ...rows.map((row) => row.length))

@@ -62,6 +62,32 @@ async function startConversion(request: WorkerRequest & { type: 'START_CONVERSIO
     })
   }
 
+  // GitHub source ZIPs hold thousands of tiny files; sending a message per
+  // file floods the main thread, so progress is throttled and flushed at the end
+  let lastProgressAt = 0
+  let pendingProgressFile: string | undefined
+  let hasPendingProgress = false
+  const PROGRESS_THROTTLE_MS = 100
+
+  const queueProgress = (currentFile?: string) => {
+    pendingProgressFile = currentFile
+    hasPendingProgress = true
+    const now = Date.now()
+    if (now - lastProgressAt < PROGRESS_THROTTLE_MS) return
+    lastProgressAt = now
+    hasPendingProgress = false
+    postProgress(pendingProgressFile)
+    pendingProgressFile = undefined
+  }
+
+  const flushProgress = () => {
+    if (!hasPendingProgress) return
+    hasPendingProgress = false
+    lastProgressAt = Date.now()
+    postProgress(pendingProgressFile)
+    pendingProgressFile = undefined
+  }
+
   const recordSkipped = (entry: ZipEntry, reason: string) => {
     processedFiles += 1
     skippedFiles += 1
@@ -70,7 +96,7 @@ async function startConversion(request: WorkerRequest & { type: 'START_CONVERSIO
       status: 'skipped',
       reason,
     })
-    postProgress(entry.path)
+    queueProgress(entry.path)
   }
 
   const recordFailed = (entry: ZipEntry, reason: string) => {
@@ -81,7 +107,7 @@ async function startConversion(request: WorkerRequest & { type: 'START_CONVERSIO
       status: 'failed',
       reason,
     })
-    postProgress(entry.path)
+    queueProgress(entry.path)
   }
 
   const recordConverted = (entry: ZipEntry, outputPath: string) => {
@@ -92,7 +118,7 @@ async function startConversion(request: WorkerRequest & { type: 'START_CONVERSIO
       outputPath,
       status: 'converted',
     })
-    postProgress(entry.path)
+    queueProgress(entry.path)
   }
 
   try {
@@ -116,10 +142,11 @@ async function startConversion(request: WorkerRequest & { type: 'START_CONVERSIO
       recordSkipped,
       recordFailed,
       recordConverted,
-      postProgress,
+      postProgress: queueProgress,
     })
+    flushProgress()
 
-    const cancelled = cancelRequested && processedFiles < totalFiles
+    const cancelled = cancelRequested && (totalFiles === 0 || processedFiles < totalFiles)
     const report = createReport({
       sourceZipName: request.file.name,
       convertedAt: formatConversionTimestamp(),
@@ -136,8 +163,10 @@ async function startConversion(request: WorkerRequest & { type: 'START_CONVERSIO
     })
 
     const reportMarkdown = createConversionReportMarkdown(report)
-    const finalMarkdown = `${reportMarkdown}\n\n---\n\n${sections.join('\n\n')}`
-    const outputBlob = new Blob([finalMarkdown], { type: 'text/markdown;charset=utf-8' })
+    // Build the Blob from parts so the full output never exists twice as one giant string
+    const blobParts: BlobPart[] = [reportMarkdown]
+    for (const section of sections) blobParts.push('\n\n---\n\n', section)
+    const outputBlob = new Blob(blobParts, { type: 'text/markdown;charset=utf-8' })
 
     if (cancelled) {
       postWorkerMessage({
@@ -218,27 +247,33 @@ function createFileDataHandler(
     }
 
     if (final) {
-      try {
-        const bytes = concatChunks(chunks, byteLength)
-        const content = decodeText(bytes)
-        const conversion = convertToMarkdown(entry.extension, content)
-        const displayPath = entry.safePath
+      // Async because CSV parsing lazy-loads PapaParse; cleanup stays in
+      // finally so the file slot is held until conversion settles
+      void (async () => {
+        try {
+          const bytes = concatChunks(chunks, byteLength)
+          const content = decodeText(bytes)
+          const conversion = await convertToMarkdown(entry.extension, content)
+          if (cancelRequested || terminated) return
+          const displayPath = entry.safePath
 
-        params.sections.push(`## ${displayPath}\n\n${conversion.markdown}`)
-        params.warnings.push(
-          ...conversion.warnings.map((warning) => `${entry.path}: ${warning}`),
-        )
-        params.recordConverted(entry, displayPath)
-      } catch (conversionError) {
-        params.recordFailed(
-          entry,
-          conversionError instanceof Error
-            ? conversionError.message
-            : 'Unable to convert file',
-        )
-      } finally {
-        cleanup()
-      }
+          params.sections.push(`## ${displayPath}\n\n${conversion.markdown}`)
+          params.warnings.push(
+            ...conversion.warnings.map((warning) => `${entry.path}: ${warning}`),
+          )
+          params.recordConverted(entry, displayPath)
+        } catch (conversionError) {
+          if (cancelRequested || terminated) return
+          params.recordFailed(
+            entry,
+            conversionError instanceof Error
+              ? conversionError.message
+              : 'Unable to convert file',
+          )
+        } finally {
+          cleanup()
+        }
+      })()
     }
   }
 
@@ -361,17 +396,22 @@ async function pushChunks(unzip: Unzip, data: Uint8Array): Promise<void> {
     return
   }
 
-  for (let offset = 0; offset < data.length; offset += streamChunkBytes) {
-    if (cancelRequested) {
-      activeTerminators.forEach((terminate) => terminate())
-      activeTerminators = new Set()
-      return
-    }
+  await pushChunkAt(unzip, data, 0)
+}
 
-    const end = Math.min(offset + streamChunkBytes, data.length)
-    unzip.push(data.subarray(offset, end), end === data.length)
-    await yieldToWorker()
+async function pushChunkAt(unzip: Unzip, data: Uint8Array, offset: number): Promise<void> {
+  if (cancelRequested) {
+    activeTerminators.forEach((terminate) => terminate())
+    activeTerminators = new Set()
+    return
   }
+
+  const end = Math.min(offset + streamChunkBytes, data.length)
+  const isLast = end === data.length
+  unzip.push(data.subarray(offset, end), isLast)
+  if (isLast) return
+  await yieldToWorker()
+  return pushChunkAt(unzip, data, end)
 }
 
 function concatChunks(chunks: Uint8Array[], byteLength: number): Uint8Array {

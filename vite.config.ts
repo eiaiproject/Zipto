@@ -24,10 +24,35 @@ export default defineConfig({
             type: 'image/svg+xml',
             purpose: 'any maskable',
           },
+          {
+            src: '/pwa-icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/pwa-icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
         ],
       },
       workbox: {
         navigateFallback: '/index.html',
+        // jspdf is ~800KB and only needed when the user clicks Download PDF,
+        // so keep it out of the install-time precache and cache it on first use
+        globIgnores: ['**/pdf.worker-*.js'],
+        runtimeCaching: [
+          {
+            urlPattern: /pdf\.worker-.*\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pdf-worker',
+              expiration: { maxEntries: 2 },
+            },
+          },
+        ],
       },
     }),
   ],

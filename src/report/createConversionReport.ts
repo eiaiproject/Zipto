@@ -7,7 +7,6 @@ export function createConversionReportMarkdown(report: ConversionReport): string
   let statusText = 'Failed'
   if (report.cancelled) statusText = 'Cancelled'
   else if (report.completed) statusText = 'Completed'
-  // ponytail: status icon omitted; replace with inline reicon.dev SVG when assets available
 
   const parts: string[] = [
     '# Conversion Report',
@@ -31,21 +30,21 @@ export function createConversionReportMarkdown(report: ConversionReport): string
   {
     const lines = failedFiles.length === 0
       ? ['None.']
-      : failedFiles.map((f) => `- \`${escapeBackticks(f.sourcePath)}\` — ${f.reason ?? 'Unknown error'}`)
+      : failedFiles.map((f) => `- \`${escapeBackticks(f.sourcePath)}\`: ${f.reason ?? 'Unknown error'}`)
     parts.push(`## Failed Files (${failedFiles.length})`, '', ...lines, '')
   }
 
   {
     const lines = skippedFiles.length === 0
       ? ['None.']
-      : skippedFiles.map((f) => `- \`${escapeBackticks(f.sourcePath)}\` — ${f.reason ?? 'Unknown reason'}`)
+      : skippedFiles.map((f) => `- \`${escapeBackticks(f.sourcePath)}\`: ${f.reason ?? 'Unknown reason'}`)
     parts.push(`## Skipped Files (${skippedFiles.length})`, '', ...lines, '')
   }
 
   {
     const lines = report.unsafePaths.length === 0
       ? ['None.']
-      : report.unsafePaths.map((p) => `- \`${escapeBackticks(p.path)}\` — ${p.reason} (${p.action})`)
+      : report.unsafePaths.map((p) => `- \`${escapeBackticks(p.path)}\`: ${p.reason} (${p.action})`)
     parts.push(`## Unsafe Paths (${report.unsafePaths.length})`, '', ...lines, '')
   }
 
